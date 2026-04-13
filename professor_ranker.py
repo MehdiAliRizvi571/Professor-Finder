@@ -43,6 +43,37 @@ load_dotenv()
 # ── DEFAULTS (overridden by CLI args) ──────────────────────────────────────────
 
 DEFAULT_FIELD    = "mechanical engineering"
+
+# Map user-facing field names to OpenAlex subfield IDs.
+# Use /subfields endpoint to discover IDs:  https://api.openalex.org/subfields?search=...
+TARGET_SUBFIELDS = {
+    "mechanical engineering": [
+        2210,   # Mechanical Engineering
+        2206,   # Computational Mechanics
+        2211,   # Mechanics of Materials
+        2209,   # Industrial and Manufacturing Engineering
+        2203,   # Automotive Engineering
+        2202,   # Aerospace Engineering
+    ],
+    "thermal & energy engineering": [
+        2102,   # Energy Engineering and Power Technology
+        2105,   # Renewable Energy, Sustainability and the Environment
+        2100,   # General Energy
+    ],
+    "environmental engineering": [
+        2305,   # Environmental Engineering
+        2304,   # Environmental Chemistry
+    ],
+    "computer science": [
+        1706,   # Computer Science Applications
+        1702,   # Artificial Intelligence
+        1712,   # Software
+    ],
+}
+
+# Flat set of all allowed subfield IDs (union of every group above)
+ALLOWED_SUBFIELD_IDS = {sid for ids in TARGET_SUBFIELDS.values() for sid in ids}
+
 DEFAULT_KEYWORDS = [
     "physics-informed",
     "heat transfer",
@@ -75,7 +106,7 @@ FROM_DATE = date(date.today().year - 2, date.today().month, date.today().day).st
 
 MIN_PAPERS    = 3        # minimum papers in the date window to qualify
 MAX_AUTHORS   = 200      # cap on how many authors to process (API budget)
-LAST_N_PAPERS = 3        # papers to fetch per author for keyword scoring
+LAST_N_PAPERS = 10       # papers to fetch per author for keyword scoring
 
 BASE_URL = "https://api.openalex.org"
 EMAIL    = os.getenv("OPENALEX_EMAIL")
@@ -149,43 +180,70 @@ def keyword_hits(abstract: str, keywords: list[str]) -> dict[str, bool]:
     return {kw: kw.lower() in lo for kw in keywords}
 
 
-# ── STEP 1: Resolve field to OpenAlex topic IDs ───────────────────────────────
+# ── STEP 1: Resolve field to OpenAlex subfield IDs & topic IDs ─────────────────
+
+def resolve_subfield_ids(field: str) -> list[int]:
+    """
+    Map the user-supplied field name to a list of OpenAlex subfield IDs.
+    First checks the hard-coded TARGET_SUBFIELDS map; if the field isn't
+    there, falls back to a search on the /subfields endpoint.
+    Always returns the union of ALL allowed subfield IDs so that every
+    target department is covered.
+    """
+    # Always use the full union of allowed subfields
+    subfield_ids = list(ALLOWED_SUBFIELD_IDS)
+
+    # If the user typed a specific field that appears in TARGET_SUBFIELDS,
+    # log which group matched; but we still include everything.
+    matched_key = None
+    for key in TARGET_SUBFIELDS:
+        if key in field.lower():
+            matched_key = key
+            break
+
+    if matched_key:
+        print(f"  Matched target group '{matched_key}' -> subfield IDs {TARGET_SUBFIELDS[matched_key]}")
+    else:
+        # Fallback: search OpenAlex for subfields matching the field name
+        data = api_get(f"{BASE_URL}/subfields", {"search": field, "per_page": 10})
+        for sf in data.get("results", []):
+            sf_id = int(sf["id"].split("/")[-1])
+            if sf_id not in ALLOWED_SUBFIELD_IDS:
+                subfield_ids.append(sf_id)
+                print(f"  Added subfield via search: {sf.get('display_name')} (id={sf_id})")
+
+    return subfield_ids
+
 
 def find_topic_ids(field: str) -> list[str]:
     """
-    Search OpenAlex topics for the given field name.
-    Combines a free-text search with a subfield-name filter to maximise recall.
-    Returns up to 50 topic IDs (the API OR-filter cap is 100).
+    Resolve the field to OpenAlex topic IDs by pulling the exact topic lists
+    from the /subfields/<id> endpoint for each target subfield.
+    This is far more precise than free-text search which matches unrelated
+    topics just because they contain the word 'engineering'.
     """
-    print(f"\n[1/5] Resolving '{field}' -> OpenAlex topic IDs ...")
+    print(f"\n[1/6] Resolving '{field}' -> OpenAlex topic IDs via subfields ...")
+    subfield_ids = resolve_subfield_ids(field)
+    print(f"  Using subfield IDs: {subfield_ids}")
+
     seen = set()
     ids  = []
 
-    # Pass 1: free-text search on display_name / description
-    for t in api_get(f"{BASE_URL}/topics", {"search": field, "per_page": 50}).get("results", []):
-        name     = t.get("display_name", "").lower()
-        subfield = (t.get("subfield") or {}).get("display_name", "").lower()
-        f_name   = (t.get("field")    or {}).get("display_name", "").lower()
-        terms    = field.lower().split()
-        if any(term in name or term in subfield or term in f_name for term in terms):
+    for sf_id in subfield_ids:
+        data = api_get(f"{BASE_URL}/subfields/{sf_id}")
+        sf_name = data.get("display_name", f"subfield-{sf_id}")
+        topics  = data.get("topics", [])
+        count   = 0
+        for t in topics:
             tid = t["id"].split("/")[-1]
             if tid not in seen:
                 seen.add(tid)
                 ids.append(tid)
+                count += 1
+        print(f"  {sf_name}: {count} topics")
+        time.sleep(0.05)
 
-    # Pass 2: subfield display_name filter (catches the umbrella subfield)
-    query = "+".join(field.split())
-    for t in api_get(f"{BASE_URL}/topics", {
-        "filter": f"subfield.display_name.search:{query}",
-        "per_page": 100,
-    }).get("results", []):
-        tid = t["id"].split("/")[-1]
-        if tid not in seen:
-            seen.add(tid)
-            ids.append(tid)
-
-    ids = ids[:50]
-    print(f"  Found {len(ids)} topic IDs   sample: {ids[:5]}")
+    print(f"  Total unique topic IDs: {len(ids)}   sample: {ids[:5]}")
     return ids
 
 
@@ -193,16 +251,19 @@ def find_topic_ids(field: str) -> list[str]:
 
 def fetch_qualifying_authors(topic_ids: list[str], field: str) -> dict[str, dict]:
     """
-    Pull works from /works filtered by US institution + field topics + date range.
+    Pull works from /works filtered by US institution + target subfields + date range.
+    Uses topics.subfield.id filter for precision (avoids leaking unrelated fields).
     Count papers per author; return those with >= MIN_PAPERS.
     """
-    print(f"\n[2/5] Fetching recent US '{field}' works ({FROM_DATE} -> {TO_DATE}) ...")
-    topic_filter = "|".join(topic_ids)
+    print(f"\n[2/6] Fetching recent US '{field}' works ({FROM_DATE} -> {TO_DATE}) ...")
+
+    # Use subfield IDs directly — much cleaner than passing 100+ topic IDs
+    subfield_filter = "|".join(str(sid) for sid in ALLOWED_SUBFIELD_IDS)
 
     works = paginate(f"{BASE_URL}/works", {
         "filter": (
             f"institutions.country_code:us,"
-            f"topics.id:{topic_filter},"
+            f"topics.subfield.id:{subfield_filter},"
             f"from_publication_date:{FROM_DATE},"
             f"to_publication_date:{TO_DATE},"
             f"type:article"
@@ -278,9 +339,58 @@ def fetch_qualifying_authors(topic_ids: list[str], field: str) -> dict[str, dict
 #     print(f"  Done -- {len(enriched)} profiles enriched")
 #     return enriched
 
+def _pick_institution(author_data: dict, fallback: str = "Unknown") -> str:
+    """
+    Pick the best institution name from the author profile.
+    Priority: last_known_institutions (US, education) > first last_known > fallback.
+    """
+    lki = author_data.get("last_known_institutions") or []
+
+    # Prefer a US education institution
+    for inst in lki:
+        if (inst.get("country_code") or "").upper() == "US" and inst.get("type") == "education":
+            return inst.get("display_name", fallback)
+
+    # Fallback to any US institution
+    for inst in lki:
+        if (inst.get("country_code") or "").upper() == "US":
+            return inst.get("display_name", fallback)
+
+    # Fallback to first entry
+    if lki:
+        return lki[0].get("display_name", fallback)
+
+    # last_known_institutions may be empty — try affiliations with most recent year
+    for aff in (author_data.get("affiliations") or []):
+        inst = aff.get("institution", {})
+        if (inst.get("country_code") or "").upper() == "US" and inst.get("type") == "education":
+            return inst.get("display_name", fallback)
+
+    return fallback
+
+
+def _author_matches_department(author_data: dict) -> bool:
+    """
+    Verify the author's research topics overlap with our target subfields.
+    Checks the author's top topics — at least one must belong to an allowed subfield.
+    """
+    for t in (author_data.get("topics") or [])[:10]:
+        subfield = t.get("subfield") or {}
+        sf_id_str = subfield.get("id", "")
+        if sf_id_str:
+            try:
+                sf_id = int(sf_id_str.split("/")[-1])
+                if sf_id in ALLOWED_SUBFIELD_IDS:
+                    return True
+            except (ValueError, IndexError):
+                pass
+    return False
+
+
 def fetch_author_profiles(authors: dict[str, dict]) -> dict[str, dict]:
-    print(f"\n[3/5] Fetching author profiles (up to {MAX_AUTHORS}) ...")
+    print(f"\n[3/6] Fetching author profiles (up to {MAX_AUTHORS}) ...")
     enriched = {}
+    filtered_out = 0
     ids = list(authors.keys())[:MAX_AUTHORS]
 
     # Process in batches of 50 instead of one by one
@@ -296,8 +406,19 @@ def fetch_author_profiles(authors: dict[str, dict]) -> dict[str, dict]:
 
         for author_data in data.get("results", []):
             aid = author_data["id"].split("/")[-1]
+
+            # ── Department verification: skip authors whose topics don't overlap ──
+            if not _author_matches_department(author_data):
+                filtered_out += 1
+                continue
+
+            # ── Use last_known_institutions for CORRECT institution ──
+            institution = _pick_institution(author_data,
+                                            fallback=authors.get(aid, {}).get("institution", "Unknown"))
+
             enriched[aid] = {
                 **authors.get(aid, {}),
+                "institution":    institution,
                 "orcid":          (author_data.get("ids") or {}).get("orcid", ""),
                 "works_count":    author_data.get("works_count", 0),
                 "cited_by_count": author_data.get("cited_by_count", 0),
@@ -315,16 +436,17 @@ def fetch_author_profiles(authors: dict[str, dict]) -> dict[str, dict]:
     # Fill in any authors missing from batch results
     for aid in ids:
         if aid not in enriched:
-            enriched[aid] = authors[aid]
+            # Don't add authors that weren't returned by API (likely filtered)
+            pass
 
-    print(f"  Done -- {len(enriched)} profiles enriched")
+    print(f"  Done -- {len(enriched)} profiles enriched, {filtered_out} filtered (wrong department)")
     return enriched
 
 # ── STEP 4: Last N papers per author ──────────────────────────────────────────
 
 def fetch_recent_papers(author_ids: list[str]) -> dict[str, list[dict]]:
     """Fetch the most recent LAST_N_PAPERS articles for each author."""
-    print(f"\n[4/5] Fetching last {LAST_N_PAPERS} papers per author ...")
+    print(f"\n[4/6] Fetching last {LAST_N_PAPERS} papers per author ...")
     author_papers = {}
 
     for i, aid in enumerate(author_ids, 1):
@@ -361,20 +483,36 @@ def score_and_rank(
     keywords:      list[str],
 ) -> list[dict]:
     """
-    Score: +1 per unique keyword present in any of the author's abstracts.
+    Scoring formula (per author):
+      keyword_score  = count of unique keywords found in titles + abstracts
+      keyword_pct    = keyword_score / len(keywords) * 100
+      h_index_bonus  = min(h_index, 50) / 50 * 20          (up to 20 pts)
+      cite_bonus     = min(cited_by_count, 20000) / 20000 * 10  (up to 10 pts)
+      total_score    = keyword_pct + h_index_bonus + cite_bonus  (max ~130)
+
     Tie-break: cited_by_count descending.
     """
-    print("\n[5/5] Scoring and ranking ...")
+    print("\n[5/6] Scoring and ranking ...")
     ranked = []
 
     for aid, profile in profiles.items():
         found = {kw: False for kw in keywords}
         for paper in author_papers.get(aid, []):
-            for kw, hit in keyword_hits(paper["abstract"], keywords).items():
+            # Check both abstract AND title for keyword hits
+            text = (paper.get("title") or "") + " " + (paper.get("abstract") or "")
+            for kw, hit in keyword_hits(text, keywords).items():
                 if hit:
                     found[kw] = True
 
-        score   = sum(found.values())
+        kw_score = sum(found.values())
+        kw_pct   = (kw_score / len(keywords) * 100) if keywords else 0
+
+        h_index        = profile.get("h_index", 0) or 0
+        cited_by_count = profile.get("cited_by_count", 0) or 0
+        h_bonus   = min(h_index, 50) / 50 * 20
+        cite_bonus = min(cited_by_count, 20000) / 20000 * 10
+        total_score = round(kw_pct + h_bonus + cite_bonus, 1)
+
         matched = [kw for kw, hit in found.items() if hit]
         missed  = [kw for kw, hit in found.items() if not hit]
 
@@ -390,12 +528,14 @@ def score_and_rank(
         ranked.append({
             **profile,
             **papers_flat,
-            "score":       score,
+            "score":       total_score,
+            "kw_matched":  kw_score,
+            "kw_total":    len(keywords),
             "matched_kws": "; ".join(matched),
             "missed_kws":  "; ".join(missed),
         })
 
-    ranked = [r for r in ranked if r["score"] > 0]
+    ranked = [r for r in ranked if r["kw_matched"] > 0]
     ranked.sort(key=lambda x: (x["score"], x.get("cited_by_count", 0)), reverse=True)
     return ranked
 
@@ -421,7 +561,8 @@ def save_csv(ranked: list[dict], field: str, keywords: list[str]) -> str:
     kw_slug  = "_".join(kw.replace(" ", "-") for kw in keywords[:2])
     out_path = f"ranked_professors_run{run_count}_{kw_slug}.csv"
     base_cols = [
-        "rank", "score", "name", "institution", "openalex_url", "orcid",
+        "rank", "score", "kw_matched", "kw_total", "name", "institution",
+        "openalex_url", "orcid",
         "homepage_url", "h_index", "cited_by_count", "works_count",
         "top_topics", "matched_kws", "missed_kws",
     ]
@@ -441,7 +582,7 @@ def save_csv(ranked: list[dict], field: str, keywords: list[str]) -> str:
         for rank, row in enumerate(ranked, 1):
             writer.writerow({"rank": rank, **row})
 
-    print(f"\n  CSV saved -> {out_path}  ({len(ranked)} rows, {len(keywords)} keywords scored)")
+    print(f"\n[6/6] CSV saved -> {out_path}  ({len(ranked)} rows, {len(keywords)} keywords scored)")
     return out_path
 
 
