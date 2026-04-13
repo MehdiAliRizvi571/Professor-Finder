@@ -511,7 +511,9 @@ def score_and_rank(
         cited_by_count = profile.get("cited_by_count", 0) or 0
         h_bonus   = min(h_index, 50) / 50 * 20
         cite_bonus = min(cited_by_count, 20000) / 20000 * 10
-        total_score = round(kw_pct + h_bonus + cite_bonus, 1)
+        # total_score = round(kw_pct + h_bonus + cite_bonus, 1)
+        total_score = round(kw_pct, 1)  # For pure keyword ranking, comment out bonuses
+
 
         matched = [kw for kw, hit in found.items() if hit]
         missed  = [kw for kw, hit in found.items() if not hit]
