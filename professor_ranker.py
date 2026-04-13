@@ -31,6 +31,7 @@ import argparse
 import requests
 from collections import defaultdict
 from dotenv import load_dotenv
+from datetime import date
 
 # ── Commented out — uncomment when ready to use OpenAI keyword expansion
 # import re
@@ -43,22 +44,35 @@ load_dotenv()
 
 DEFAULT_FIELD    = "mechanical engineering"
 DEFAULT_KEYWORDS = [
-    "finite element",
+    "physics-informed",
     "heat transfer",
     "computational fluid dynamics",
-    "additive manufacturing",
-    "tribology",
-    "fatigue",
-    "composite materials",
+    "machine learning",
+    "sustainability",
+    "predictive maintenance",
     "robotics",
     "thermal management",
-    "topology optimization",
+    "HVAC",
+    "RSM", 
+    "alternative fuels",
+    "biofuels",
+    "spark ignition engine",
+    "engine emissions",
+    "surrogate model",
+    "multi-objective optimization",
+    "machine learning combustion",
+    "response surface methodology",
+    "data-driven optimization",
+    "digital twin",
+    "renewable energy systems",
 ]
 
 # ── FIXED CONFIG ───────────────────────────────────────────────────────────────
 
-FROM_DATE     = "2023-01-01"
-TO_DATE       = "2024-12-31"
+
+TO_DATE   = date.today().strftime("%Y-%m-%d")
+FROM_DATE = date(date.today().year - 2, date.today().month, date.today().day).strftime("%Y-%m-%d")
+
 MIN_PAPERS    = 3        # minimum papers in the date window to qualify
 MAX_AUTHORS   = 200      # cap on how many authors to process (API budget)
 LAST_N_PAPERS = 3        # papers to fetch per author for keyword scoring
@@ -233,37 +247,78 @@ def fetch_qualifying_authors(topic_ids: list[str], field: str) -> dict[str, dict
 
 # ── STEP 3: Full author profiles ──────────────────────────────────────────────
 
+# def fetch_author_profiles(authors: dict[str, dict]) -> dict[str, dict]:
+#     """Hit /authors/<id> for rich metadata: h-index, citations, ORCID, etc."""
+#     print(f"\n[3/5] Fetching author profiles (up to {MAX_AUTHORS}) ...")
+#     enriched = {}
+#     ids = list(authors.keys())[:MAX_AUTHORS]
+
+#     for i, aid in enumerate(ids, 1):
+#         data = api_get(f"{BASE_URL}/authors/{aid}")
+#         if not data or "id" not in data:
+#             enriched[aid] = authors[aid]
+#         else:
+#             enriched[aid] = {
+#                 **authors[aid],
+#                 "orcid":          (data.get("ids") or {}).get("orcid", ""),
+#                 "works_count":    data.get("works_count", 0),
+#                 "cited_by_count": data.get("cited_by_count", 0),
+#                 "h_index":        (data.get("summary_stats") or {}).get("h_index", 0),
+#                 "homepage_url":   data.get("homepage_url", ""),
+#                 "openalex_url":   data.get("id", ""),
+#                 "top_topics":     "; ".join(
+#                     t.get("display_name", "")
+#                     for t in (data.get("topics") or [])[:3]
+#                 ),
+#             }
+#         if i % 20 == 0:
+#             print(f"  ... {i}/{len(ids)} profiles fetched")
+#         time.sleep(0.12)
+
+#     print(f"  Done -- {len(enriched)} profiles enriched")
+#     return enriched
+
 def fetch_author_profiles(authors: dict[str, dict]) -> dict[str, dict]:
-    """Hit /authors/<id> for rich metadata: h-index, citations, ORCID, etc."""
     print(f"\n[3/5] Fetching author profiles (up to {MAX_AUTHORS}) ...")
     enriched = {}
     ids = list(authors.keys())[:MAX_AUTHORS]
 
-    for i, aid in enumerate(ids, 1):
-        data = api_get(f"{BASE_URL}/authors/{aid}")
-        if not data or "id" not in data:
-            enriched[aid] = authors[aid]
-        else:
+    # Process in batches of 50 instead of one by one
+    batch_size = 50
+    for batch_start in range(0, len(ids), batch_size):
+        batch = ids[batch_start: batch_start + batch_size]
+        filter_str = "|".join(batch)
+
+        data = api_get(f"{BASE_URL}/authors", {
+            "filter": f"openalex_id:{filter_str}",
+            "per_page": batch_size,
+        })
+
+        for author_data in data.get("results", []):
+            aid = author_data["id"].split("/")[-1]
             enriched[aid] = {
-                **authors[aid],
-                "orcid":          (data.get("ids") or {}).get("orcid", ""),
-                "works_count":    data.get("works_count", 0),
-                "cited_by_count": data.get("cited_by_count", 0),
-                "h_index":        (data.get("summary_stats") or {}).get("h_index", 0),
-                "homepage_url":   data.get("homepage_url", ""),
-                "openalex_url":   data.get("id", ""),
+                **authors.get(aid, {}),
+                "orcid":          (author_data.get("ids") or {}).get("orcid", ""),
+                "works_count":    author_data.get("works_count", 0),
+                "cited_by_count": author_data.get("cited_by_count", 0),
+                "h_index":        (author_data.get("summary_stats") or {}).get("h_index", 0),
+                "homepage_url":   author_data.get("homepage_url", ""),
+                "openalex_url":   author_data.get("id", ""),
                 "top_topics":     "; ".join(
                     t.get("display_name", "")
-                    for t in (data.get("topics") or [])[:3]
+                    for t in (author_data.get("topics") or [])[:3]
                 ),
             }
-        if i % 20 == 0:
-            print(f"  ... {i}/{len(ids)} profiles fetched")
-        time.sleep(0.12)
+        print(f"  ... {min(batch_start + batch_size, len(ids))}/{len(ids)} profiles fetched")
+        time.sleep(0.05)
+
+    # Fill in any authors missing from batch results
+    for aid in ids:
+        if aid not in enriched:
+            enriched[aid] = authors[aid]
 
     print(f"  Done -- {len(enriched)} profiles enriched")
     return enriched
-
 
 # ── STEP 4: Last N papers per author ──────────────────────────────────────────
 
@@ -293,7 +348,7 @@ def fetch_recent_papers(author_ids: list[str]) -> dict[str, list[dict]]:
 
         if i % 25 == 0:
             print(f"  ... {i}/{len(author_ids)} done")
-        time.sleep(0.12)
+        time.sleep(0.06)  # slight delay to avoid hitting rate limits
 
     return author_papers
 
@@ -340,6 +395,7 @@ def score_and_rank(
             "missed_kws":  "; ".join(missed),
         })
 
+    ranked = [r for r in ranked if r["score"] > 0]
     ranked.sort(key=lambda x: (x["score"], x.get("cited_by_count", 0)), reverse=True)
     return ranked
 
@@ -348,9 +404,22 @@ def score_and_rank(
 
 def save_csv(ranked: list[dict], field: str, keywords: list[str]) -> str:
     """Write ranked results to a CSV. Returns the file path."""
-    slug     = field.lower().replace(" ", "_")
-    out_path = f"ranked_professors_{slug}.csv"
+    "SAVES CSV with filename pattern: ranked_professors_run{N}_{field}_{kw1_kw2}.csv"
 
+    # Read, increment, and save run counter
+    env_path  = os.path.join(os.path.dirname(__file__), ".env")
+    run_count = int(os.getenv("RUN_COUNT", "0")) + 1
+
+    # Rewrite the RUN_COUNT line in .env
+    with open(env_path, "r") as f:
+        env_lines = f.readlines()
+    with open(env_path, "w") as f:
+        for line in env_lines:
+            f.write(f"RUN_COUNT={run_count}\n" if line.startswith("RUN_COUNT=") else line)
+
+    # Build filename: run number + first 2 keywords
+    kw_slug  = "_".join(kw.replace(" ", "-") for kw in keywords[:2])
+    out_path = f"ranked_professors_run{run_count}_{kw_slug}.csv"
     base_cols = [
         "rank", "score", "name", "institution", "openalex_url", "orcid",
         "homepage_url", "h_index", "cited_by_count", "works_count",
