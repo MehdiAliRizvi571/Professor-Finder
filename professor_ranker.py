@@ -25,6 +25,7 @@ Env vars:
 """
 
 import os
+import re
 import csv
 import time
 import argparse
@@ -178,6 +179,37 @@ def keyword_hits(abstract: str, keywords: list[str]) -> dict[str, bool]:
     """Return {keyword: True/False} — case-insensitive substring match."""
     lo = abstract.lower()
     return {kw: kw.lower() in lo for kw in keywords}
+
+
+# Patterns that indicate a department segment in a raw affiliation string.
+# Ordered from most to least specific.
+_DEPT_PATTERNS = [
+    re.compile(
+        r'(?:Department|Dept\.?|School|Division|Faculty|Institute|Center|College)'   # anchor word
+        r'\s+of\s+([^,;\n]{5,80})',                                                  # "of <name>"
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r'([^,;\n]{5,80}?)\s+(?:Department|Dept\.?)',                                # "<name> Department"
+        re.IGNORECASE,
+    ),
+]
+
+
+def parse_department(raw_strings: list[str]) -> str:
+    """
+    Extract a department name from a list of raw affiliation strings
+    (the verbatim text an author puts on their paper).
+    Returns the first match found, or an empty string if nothing matches.
+    """
+    for raw in raw_strings:
+        for pat in _DEPT_PATTERNS:
+            m = pat.search(raw)
+            if m:
+                dept = m.group(0).strip().rstrip(",;")
+                # Keep it short — truncate at 80 chars
+                return dept[:80]
+    return ""
 
 
 # ── STEP 1: Resolve field to OpenAlex subfield IDs & topic IDs ─────────────────
@@ -444,19 +476,26 @@ def fetch_author_profiles(authors: dict[str, dict]) -> dict[str, dict]:
 
 # ── STEP 4: Last N papers per author ──────────────────────────────────────────
 
-def fetch_recent_papers(author_ids: list[str]) -> dict[str, list[dict]]:
-    """Fetch the most recent LAST_N_PAPERS articles for each author."""
+def fetch_recent_papers(author_ids: list[str]) -> tuple[dict[str, list[dict]], dict[str, str]]:
+    """
+    Fetch the most recent LAST_N_PAPERS articles for each author.
+    Also extracts the raw affiliation string from the most recent paper to
+    derive a department name via parse_department().
+    Returns (author_papers, author_departments).
+    """
     print(f"\n[4/6] Fetching last {LAST_N_PAPERS} papers per author ...")
     author_papers = {}
+    author_departments: dict[str, str] = {}
 
     for i, aid in enumerate(author_ids, 1):
         data = api_get(f"{BASE_URL}/works", {
             "filter":   f"authorships.author.id:{aid},type:article",
             "sort":     "publication_date:desc",
             "per_page": LAST_N_PAPERS,
-            "select":   "id,title,doi,publication_year,abstract_inverted_index,primary_location",
+            "select":   "id,title,doi,publication_year,abstract_inverted_index,primary_location,authorships",
         })
         papers = []
+        dept_found = False
         for w in data.get("results", []):
             source = (w.get("primary_location") or {}).get("source") or {}
             papers.append({
@@ -466,21 +505,32 @@ def fetch_recent_papers(author_ids: list[str]) -> dict[str, list[dict]]:
                 "journal":  source.get("display_name", ""),
                 "abstract": reconstruct_abstract(w.get("abstract_inverted_index")),
             })
+            # Extract department from the most recent paper where this author appears
+            if not dept_found:
+                for auth in (w.get("authorships") or []):
+                    if aid in (auth.get("author") or {}).get("id", ""):
+                        raw = auth.get("raw_affiliation_strings") or []
+                        dept = parse_department(raw)
+                        if dept:
+                            author_departments[aid] = dept
+                            dept_found = True
+                        break
         author_papers[aid] = papers
 
         if i % 25 == 0:
             print(f"  ... {i}/{len(author_ids)} done")
         time.sleep(0.06)  # slight delay to avoid hitting rate limits
 
-    return author_papers
+    return author_papers, author_departments
 
 
 # ── STEP 5: Score & rank ──────────────────────────────────────────────────────
 
 def score_and_rank(
-    profiles:      dict[str, dict],
-    author_papers: dict[str, list[dict]],
-    keywords:      list[str],
+    profiles:           dict[str, dict],
+    author_papers:      dict[str, list[dict]],
+    author_departments: dict[str, str],
+    keywords:           list[str],
 ) -> list[dict]:
     """
     Scoring formula (per author):
@@ -535,6 +585,7 @@ def score_and_rank(
             "kw_total":    len(keywords),
             "matched_kws": "; ".join(matched),
             "missed_kws":  "; ".join(missed),
+            "department":  author_departments.get(aid, ""),
         })
 
     ranked = [r for r in ranked if r["kw_matched"] > 0]
@@ -564,7 +615,7 @@ def save_csv(ranked: list[dict], field: str, keywords: list[str]) -> str:
     out_path = f"ranked_professors_run{run_count}_{kw_slug}.csv"
     base_cols = [
         "rank", "score", "kw_matched", "kw_total", "name", "institution",
-        "openalex_url", "orcid",
+        "department", "openalex_url", "orcid",
         "homepage_url", "h_index", "cited_by_count", "works_count",
         "top_topics", "matched_kws", "missed_kws",
     ]
@@ -578,7 +629,7 @@ def save_csv(ranked: list[dict], field: str, keywords: list[str]) -> str:
 
     all_cols = base_cols + paper_cols
 
-    with open(out_path, "w", newline="", encoding="utf-8") as f:
+    with open(out_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=all_cols, extrasaction="ignore")
         writer.writeheader()
         for rank, row in enumerate(ranked, 1):
@@ -678,9 +729,9 @@ def main():
         print(f"\n  No qualifying authors found. Try lowering MIN_PAPERS or widening the date range.")
         return
 
-    profiles      = fetch_author_profiles(authors)
-    author_papers = fetch_recent_papers(list(profiles.keys()))
-    ranked        = score_and_rank(profiles, author_papers, keywords)
+    profiles                        = fetch_author_profiles(authors)
+    author_papers, author_departments = fetch_recent_papers(list(profiles.keys()))
+    ranked                          = score_and_rank(profiles, author_papers, author_departments, keywords)
 
     save_csv(ranked, field, keywords)
 
