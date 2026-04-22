@@ -27,6 +27,7 @@ Env vars:
 import os
 import re
 import csv
+import json
 import time
 import argparse
 import requests
@@ -63,7 +64,6 @@ TARGET_SUBFIELDS = {
     ],
     "environmental engineering": [
         2305,   # Environmental Engineering
-        2304,   # Environmental Chemistry
     ],
     "computer science": [
         1706,   # Computer Science Applications
@@ -76,27 +76,57 @@ TARGET_SUBFIELDS = {
 ALLOWED_SUBFIELD_IDS = {sid for ids in TARGET_SUBFIELDS.values() for sid in ids}
 
 DEFAULT_KEYWORDS = [
-    "physics-informed",
-    "heat transfer",
-    "computational fluid dynamics",
-    "machine learning",
-    "sustainability",
-    "predictive maintenance",
-    "robotics",
-    "thermal management",
-    "HVAC",
-    "RSM", 
-    "alternative fuels",
-    "biofuels",
-    "spark ignition engine",
-    "engine emissions",
-    "surrogate model",
-    "multi-objective optimization",
+    # High discrimination — niche to your exact work
     "machine learning combustion",
+    "NSGA-III",
+    "surrogate model",
+    "spark ignition engine",
+    "internal combustion engine",
+    "physics-informed",
+    "alternative fuels",
+    "convex hull",
     "response surface methodology",
+    "fuel blend",
+    "alcohol gasoline",
+    "oxygenated fuel",
+    "biofuels",
+    "brake thermal efficiency",
+    "NOx prediction",
+    "emission reduction",
+    "emissions optimization",
+    "engine emissions",
+    "gradient boosting",
+    "XGBoost",
+    "evolutionary algorithm",
+    "Pareto optimization",
     "data-driven optimization",
     "digital twin",
+    "knowledge graph",
+    "scientific machine learning",
+    "neural operator",
+    "Neo4j",
+    "graph neural network",
+    "stochastic modeling",
+    "Gaussian process",
+    "techno-economic analysis",
+    "LCA",
+    "life cycle assessment",
+
+    # Medium discrimination — specific but broader
+    "multi-objective optimization",
+    "heat transfer",
+    "computational fluid dynamics",
+    "data driven thermodynamics",
+    "thermal management",
     "renewable energy systems",
+    "energy optimization",
+    "decarbonization",
+    "energy transition",
+
+    # Low discrimination — broad but still additive
+    "machine learning",
+    "artificial intelligence",
+    "sustainability",
 ]
 
 # ── FIXED CONFIG ───────────────────────────────────────────────────────────────
@@ -106,7 +136,7 @@ TO_DATE   = date.today().strftime("%Y-%m-%d")
 FROM_DATE = date(date.today().year - 2, date.today().month, date.today().day).strftime("%Y-%m-%d")
 
 MIN_PAPERS    = 3        # minimum papers in the date window to qualify
-MAX_AUTHORS   = 200      # cap on how many authors to process (API budget)
+MAX_AUTHORS   = 1000      # cap on how many authors to process (API budget)
 LAST_N_PAPERS = 10       # papers to fetch per author for keyword scoring
 
 BASE_URL = "https://api.openalex.org"
@@ -175,10 +205,18 @@ def reconstruct_abstract(inverted_index: dict | None) -> str:
     return " ".join(tokens)
 
 
-def keyword_hits(abstract: str, keywords: list[str]) -> dict[str, bool]:
-    """Return {keyword: True/False} — case-insensitive substring match."""
-    lo = abstract.lower()
-    return {kw: kw.lower() in lo for kw in keywords}
+def _normalize(text: str) -> str:
+    """Lowercase and collapse hyphens/underscores/extra whitespace to single spaces."""
+    return re.sub(r'[\s\-_]+', ' ', text.lower()).strip()
+
+
+def keyword_hits(text: str, keywords: list[str]) -> dict[str, bool]:
+    """Return {keyword: True/False} — normalized, case-insensitive substring match.
+    Hyphens and underscores in both keyword and text are treated as spaces, so
+    'physics-informed' matches 'physics informed' and vice versa.
+    """
+    norm = _normalize(text)
+    return {kw: _normalize(kw) in norm for kw in keywords}
 
 
 # Patterns that indicate a department segment in a raw affiliation string.
@@ -210,6 +248,131 @@ def parse_department(raw_strings: list[str]) -> str:
                 # Keep it short — truncate at 80 chars
                 return dept[:80]
     return ""
+
+
+# ── STATE FILTER: Load universities by state & resolve to OpenAlex IDs ──────────
+
+def load_state_universities(state: str) -> list[str]:
+    """
+    Return university names for a US state from universities_by_state.json.
+    Performs case-insensitive exact match first, then partial match fallback.
+    """
+    json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "universities_by_state.json")
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Exact case-insensitive match
+    for key, unis in data.items():
+        if key.lower() == state.lower():
+            names = [u[0] for u in unis]
+            print(f"  Found {len(names)} universities in '{key}'")
+            return names
+
+    # Partial match fallback
+    matches = [k for k in data if state.lower() in k.lower()]
+    if matches:
+        key   = matches[0]
+        names = [u[0] for u in data[key]]
+        print(f"  Partial match: '{key}' -> {len(names)} universities")
+        return names
+
+    valid = ", ".join(list(data.keys())[:10])
+    raise ValueError(f"State '{state}' not found. Valid examples: {valid} ...")
+
+
+def resolve_institution_ids(uni_names: list[str]) -> dict[str, str]:
+    """
+    For each university name, query OpenAlex /institutions to get its ID.
+    Only accepts US education institutions.
+    Returns {university_name: openalex_id}.
+    """
+    print(f"  Resolving {len(uni_names)} universities to OpenAlex IDs ...")
+    id_map  = {}
+    skipped = 0
+
+    for name in uni_names:
+        data = api_get(f"{BASE_URL}/institutions", {
+            "search":   name,
+            "filter":   "country_code:US,type:education",
+            "per_page": 1,
+        })
+        results = data.get("results", [])
+        if results:
+            oa_id         = results[0]["id"].split("/")[-1]
+            id_map[name]  = oa_id
+        else:
+            skipped += 1
+        time.sleep(0.05)
+
+    print(f"  Resolved {len(id_map)} / {len(uni_names)}  ({skipped} not found in OpenAlex)")
+    return id_map
+
+
+def fetch_authors_by_institutions(inst_id_map: dict[str, str]) -> dict[str, dict]:
+    """
+    Pull recent works from all target institutions (no field/subfield filter).
+    Count papers per author; return those with >= MIN_PAPERS.
+    Institution IDs are batched (BATCH per request) to stay within URL limits.
+    Uses (work_id, author_id) deduplication so cross-batch works aren't double-counted.
+    """
+    all_inst_ids = list(set(inst_id_map.values()))
+    print(f"\n[2b/6] Fetching recent works from {len(all_inst_ids)} institutions "
+          f"({FROM_DATE} -> {TO_DATE}) ...")
+
+    counts   = defaultdict(int)
+    metadata = {}
+    seen     = set()   # (work_id, author_id) — deduplication across batches
+    BATCH    = 15
+    n_batches = (len(all_inst_ids) + BATCH - 1) // BATCH
+
+    for b_start in range(0, len(all_inst_ids), BATCH):
+        batch       = all_inst_ids[b_start: b_start + BATCH]
+        batch_set   = set(batch)
+        inst_filter = "|".join(batch)
+        works_filter = (
+            f"authorships.institutions.id:{inst_filter},"
+            f"from_publication_date:{FROM_DATE},"
+            f"to_publication_date:{TO_DATE},"
+            f"type:article"
+        )
+        works = paginate(f"{BASE_URL}/works", {
+            "filter": works_filter,
+            "select": "id,authorships",
+        }, max_results=5000)
+
+        print(f"  Batch {b_start // BATCH + 1}/{n_batches}: {len(works)} works")
+
+        for work in works:
+            wid = (work.get("id") or "").split("/")[-1]
+            for auth in work.get("authorships", []):
+                author = auth.get("author") or {}
+                aid    = (author.get("id") or "").split("/")[-1]
+                if not aid or (wid, aid) in seen:
+                    continue
+
+                # Only count if affiliated with one of the batch institutions
+                target_inst = next(
+                    (i for i in auth.get("institutions", [])
+                     if (i.get("id") or "").split("/")[-1] in batch_set),
+                    None,
+                )
+                if not target_inst:
+                    continue
+
+                seen.add((wid, aid))
+                counts[aid] += 1
+                if aid not in metadata:
+                    metadata[aid] = {
+                        "author_id":   aid,
+                        "name":        author.get("display_name", "Unknown"),
+                        "institution": target_inst.get("display_name", "Unknown"),
+                    }
+
+        time.sleep(0.1)
+
+    qualifying = {aid: m for aid, m in metadata.items() if counts[aid] >= MIN_PAPERS}
+    print(f"  Authors with >={MIN_PAPERS} recent papers: {len(qualifying)}")
+    return qualifying
 
 
 # ── STEP 1: Resolve field to OpenAlex subfield IDs & topic IDs ─────────────────
@@ -281,27 +444,37 @@ def find_topic_ids(field: str) -> list[str]:
 
 # ── STEP 2: Qualifying authors (>= MIN_PAPERS in window) ─────────────────────
 
-def fetch_qualifying_authors(topic_ids: list[str], field: str) -> dict[str, dict]:
+def fetch_qualifying_authors(topic_ids: list[str], field: str, no_dept_filter: bool = False) -> dict[str, dict]:
     """
-    Pull works from /works filtered by US institution + target subfields + date range.
-    Uses topics.subfield.id filter for precision (avoids leaking unrelated fields).
+    Pull works from /works filtered by US institution + date range.
+    When no_dept_filter=False (default), also filters by target subfield IDs.
     Count papers per author; return those with >= MIN_PAPERS.
     """
     print(f"\n[2/6] Fetching recent US '{field}' works ({FROM_DATE} -> {TO_DATE}) ...")
+    if no_dept_filter:
+        print("  [dept filter OFF] — searching all fields, no subfield restriction")
 
-    # Use subfield IDs directly — much cleaner than passing 100+ topic IDs
-    subfield_filter = "|".join(str(sid) for sid in ALLOWED_SUBFIELD_IDS)
-
-    works = paginate(f"{BASE_URL}/works", {
-        "filter": (
+    if no_dept_filter:
+        works_filter = (
+            f"institutions.country_code:us,"
+            f"from_publication_date:{FROM_DATE},"
+            f"to_publication_date:{TO_DATE},"
+            f"type:article"
+        )
+    else:
+        subfield_filter = "|".join(str(sid) for sid in ALLOWED_SUBFIELD_IDS)
+        works_filter = (
             f"institutions.country_code:us,"
             f"topics.subfield.id:{subfield_filter},"
             f"from_publication_date:{FROM_DATE},"
             f"to_publication_date:{TO_DATE},"
             f"type:article"
-        ),
+        )
+
+    works = paginate(f"{BASE_URL}/works", {
+        "filter": works_filter,
         "select": "id,authorships",
-    }, max_results=5000)
+    }, max_results=1000)
 
     print(f"  Retrieved {len(works)} works")
 
@@ -419,7 +592,7 @@ def _author_matches_department(author_data: dict) -> bool:
     return False
 
 
-def fetch_author_profiles(authors: dict[str, dict]) -> dict[str, dict]:
+def fetch_author_profiles(authors: dict[str, dict], no_dept_filter: bool = False) -> dict[str, dict]:
     print(f"\n[3/6] Fetching author profiles (up to {MAX_AUTHORS}) ...")
     enriched = {}
     filtered_out = 0
@@ -440,7 +613,7 @@ def fetch_author_profiles(authors: dict[str, dict]) -> dict[str, dict]:
             aid = author_data["id"].split("/")[-1]
 
             # ── Department verification: skip authors whose topics don't overlap ──
-            if not _author_matches_department(author_data):
+            if not no_dept_filter and not _author_matches_department(author_data):
                 filtered_out += 1
                 continue
 
@@ -471,7 +644,8 @@ def fetch_author_profiles(authors: dict[str, dict]) -> dict[str, dict]:
             # Don't add authors that weren't returned by API (likely filtered)
             pass
 
-    print(f"  Done -- {len(enriched)} profiles enriched, {filtered_out} filtered (wrong department)")
+    dept_msg = "(dept filter OFF)" if no_dept_filter else f"{filtered_out} filtered (wrong department)"
+    print(f"  Done -- {len(enriched)} profiles enriched, {dept_msg}")
     return enriched
 
 # ── STEP 4: Last N papers per author ──────────────────────────────────────────
@@ -508,7 +682,7 @@ def fetch_recent_papers(author_ids: list[str]) -> tuple[dict[str, list[dict]], d
             # Extract department from the most recent paper where this author appears
             if not dept_found:
                 for auth in (w.get("authorships") or []):
-                    if aid in (auth.get("author") or {}).get("id", ""):
+                    if aid in ((auth.get("author") or {}).get("id") or ""):
                         raw = auth.get("raw_affiliation_strings") or []
                         dept = parse_department(raw)
                         if dept:
@@ -561,8 +735,8 @@ def score_and_rank(
         cited_by_count = profile.get("cited_by_count", 0) or 0
         h_bonus   = min(h_index, 50) / 50 * 20
         cite_bonus = min(cited_by_count, 20000) / 20000 * 10
-        # total_score = round(kw_pct + h_bonus + cite_bonus, 1)
-        total_score = round(kw_pct, 1)  # For pure keyword ranking, comment out bonuses
+        total_score = round(kw_pct + h_bonus + cite_bonus, 1)
+        # total_score = round(kw_pct, 1)  # For pure keyword ranking, comment out bonuses
 
 
         matched = [kw for kw, hit in found.items() if hit]
@@ -698,13 +872,48 @@ Examples:
         default=DEFAULT_KEYWORDS,
         help="One or more keywords — quote multi-word terms",
     )
+    parser.add_argument(
+        "--no-dept-filter",
+        action="store_true",
+        default=False,
+        help="Skip department/topic filtering — rank ALL US authors by keyword density only",
+    )
+    parser.add_argument(
+        "--state", "-s",
+        type=str,
+        default=None,
+        metavar="STATE",
+        help=(
+            "Restrict search to universities in a specific US state "
+            "(e.g., 'Texas', 'California'). "
+            "Bypasses field/department filtering — all professors at those "
+            "universities are candidates; keyword hits determine shortlisting. "
+            "Default: all US universities."
+        ),
+    )
+    parser.add_argument(
+        "--uni", "-u",
+        nargs="+",
+        default=None,
+        metavar="UNI",
+        help=(
+            "Restrict search to one or more specific universities "
+            "(e.g., 'MIT', 'UT Austin', 'Texas A&M'). "
+            "Partial names and abbreviations work. "
+            "Bypasses field/department filtering — same as --state but for individual institutions. "
+            "Quote multi-word names."
+        ),
+    )
     return parser.parse_args()
 
 
 def main():
-    args     = parse_args()
-    field    = args.field.strip()
-    keywords = [kw.strip() for kw in args.keywords if kw.strip()]
+    args           = parse_args()
+    field          = args.field.strip()
+    keywords       = [kw.strip() for kw in args.keywords if kw.strip()]
+    no_dept_filter = args.no_dept_filter
+    state          = args.state.strip() if args.state else None
+    uni_names_arg  = [u.strip() for u in args.uni if u.strip()] if args.uni else None
 
     print("=" * 72)
     print("  PROFESSOR RANKER -- powered by OpenAlex")
@@ -713,27 +922,61 @@ def main():
     print(f"  Keywords   : {keywords}")
     print(f"  Date range : {FROM_DATE} -> {TO_DATE}")
     print(f"  Min papers : {MIN_PAPERS}  |  Max authors: {MAX_AUTHORS}")
+    if uni_names_arg:
+        print(f"  University : {', '.join(uni_names_arg)}  (dept filter OFF — all fields searched)")
+    elif state:
+        print(f"  State      : {state}  (dept filter OFF — all fields searched)")
+    else:
+        print(f"  Dept filter: {'OFF (--no-dept-filter)' if no_dept_filter else 'ON'}")
 
     # ── Uncomment to enable AI keyword expansion ──────────────────────────────
     # keywords = expand_keywords_with_ai(field, keywords)
     # print(f"  Expanded   : {keywords}")
     # ─────────────────────────────────────────────────────────────────────────
 
-    topic_ids = find_topic_ids(field)
-    if not topic_ids:
-        print(f"\n  No OpenAlex topics found for '{field}'. Try a different field name.")
-        return
+    if uni_names_arg:
+        # ── University-based mode: resolve name(s) directly -> authors ────────
+        print(f"\n[1/6] University mode: resolving {len(uni_names_arg)} institution(s) ...")
+        inst_id_map = resolve_institution_ids(uni_names_arg)
+        if not inst_id_map:
+            print("  Could not resolve any university. Try a different name or spelling.")
+            return
+        authors        = fetch_authors_by_institutions(inst_id_map)
+        no_dept_filter = True
+        csv_label      = "_".join(n.replace(" ", "-") for n in uni_names_arg)[:60]
+    elif state:
+        # ── State-based mode: resolve universities -> institution IDs -> authors ──
+        print(f"\n[1/6] State mode: loading universities for '{state}' ...")
+        try:
+            uni_names = load_state_universities(state)
+        except ValueError as e:
+            print(f"  Error: {e}")
+            return
+        inst_id_map = resolve_institution_ids(uni_names)
+        if not inst_id_map:
+            print("  No institutions could be resolved. Check the state name.")
+            return
+        authors        = fetch_authors_by_institutions(inst_id_map)
+        no_dept_filter = True
+        csv_label      = state
+    else:
+        # ── Standard field-based mode ─────────────────────────────────────────
+        topic_ids = find_topic_ids(field)
+        if not topic_ids:
+            print(f"\n  No OpenAlex topics found for '{field}'. Try a different field name.")
+            return
+        authors   = fetch_qualifying_authors(topic_ids, field, no_dept_filter=no_dept_filter)
+        csv_label = field
 
-    authors = fetch_qualifying_authors(topic_ids, field)
     if not authors:
-        print(f"\n  No qualifying authors found. Try lowering MIN_PAPERS or widening the date range.")
+        print("\n  No qualifying authors found. Try lowering MIN_PAPERS or widening the date range.")
         return
 
-    profiles                        = fetch_author_profiles(authors)
+    profiles                          = fetch_author_profiles(authors, no_dept_filter=no_dept_filter)
     author_papers, author_departments = fetch_recent_papers(list(profiles.keys()))
-    ranked                          = score_and_rank(profiles, author_papers, author_departments, keywords)
+    ranked                            = score_and_rank(profiles, author_papers, author_departments, keywords)
 
-    save_csv(ranked, field, keywords)
+    save_csv(ranked, csv_label, keywords)
 
 
 if __name__ == "__main__":
