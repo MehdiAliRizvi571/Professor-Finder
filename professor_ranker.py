@@ -301,6 +301,7 @@ def resolve_institution_ids(uni_names: list[str]) -> dict[str, str]:
             oa_id         = results[0]["id"].split("/")[-1]
             id_map[name]  = oa_id
         else:
+            print(f"  [Institution not found] '{name}'")
             skipped += 1
         time.sleep(0.05)
 
