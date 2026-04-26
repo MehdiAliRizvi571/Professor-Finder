@@ -1,0 +1,348 @@
+========================================================================
+  PROFESSOR RANKER - DIAGNOSTICS
+  WSU - Date window: 2024-04-26 -> 2026-04-26  |  MIN_PAPERS=3
+========================================================================
+
+
+>>> DIAGNOSING: PROFESSORS NOT FOUND IN CSV <<<
+
+========================================================================
+  [MISSING]  Hu Yueqi
+========================================================================
+  [A] Found in OpenAlex:  display_name='Yueqi Hu'  id=A5059923148
+      Last known inst(s): ['University of North Carolina at Charlotte', 'Beijing Municipal Ecological and Environmental Monitoring Center']
+      Top topics:         ['Data Visualization and Analytics', 'Vehicle emissions and performance', 'Time Series Analysis and Forecasting', 'Video Analysis and Summarization', 'Air Quality Monitoring and Forecasting']
+  [B] WSU AFFILIATION MISSING in last_known_institutions
+  [C] WSU institution IDs found for this author: []
+  [C] Recent articles (2024-04-26 -> 2026-04-26): 0
+  [C] Of those, WSU-affiliated works (used for counting): 0
+  [D] Papers fetched for keyword scoring: 10
+  [D] Keywords matched: 1 / 46
+      Matched: ['machine learning']
+  [D] Recent paper titles:
+      - [2023] [Characteristics of Atmospheric Dust Fall Pollution and Its Chemical Composition and Mass Reconstruc
+      - [2023] TimePool: Visually Answer “Which and When” Questions On Univariate Time Series
+      - [2020] [Monitoring Method of Total Particulate Matter in Ultra-low-emission and High-humidity Exhaust Gas f
+      - [2020] Determination Method for Phosphoric Acid Mist in Exhaust Gas from Stationary Sources
+      - [2019] [Pollution Characteristics and Potential Ecological Risks of Heavy Metals in Road Dust in Beijing].
+      - [2019] [Characteristics and Interannual Variation of Chemical Components in Typical Road Dust in Beijing].
+      - [2019] Serendipity—A Machine-Learning Application for Mining Serendipitous Drug Usage From Social Media
+      - [2018] ナノテクノロジーの薬物分野における応用【JST・京大機械翻訳】
+      - [2017] TrajAnalytics: A Web-Based Visual Analytics Software of Urban Trajectory
+      - [2016] Strategic Cyber Threat Intelligence Sharing: A Case Study of IDS Logs
+
+========================================================================
+  [MISSING]  Emily Larsen
+========================================================================
+  [A] Found in OpenAlex:  display_name='Emily Larsen'  id=A5074128211
+      Last known inst(s): ['Washington State University']
+      Top topics:         ['Design Education and Practice', 'Smart Grid Security and Resilience', 'Power Systems Fault Detection', 'Manufacturing Process and Optimization', 'Recycling and Waste Management Techniques']
+  [C] WSU institution IDs found for this author: ['I72951846']
+  [C] Recent articles (2024-04-26 -> 2026-04-26): 1
+  [C] Of those, WSU-affiliated works (used for counting): 1
+  [D] Papers fetched for keyword scoring: 3
+  [D] Keywords matched: 0 / 46
+      NO KEYWORDS MATCHED -- this author would be DROPPED by score_and_rank()
+  [D] Recent paper titles:
+      - [2025] A Hands-On Approach to Teaching Tolerancing and Design for Manufacturing: Designing and 3D Printing 
+      - [1996] Feasibility Study of Passive Fault Current Limiter
+      - [1950] Lepeth sheath for telephone cables
+
+========================================================================
+  [MISSING]  Changki Mo
+========================================================================
+  [A] Found in OpenAlex:  display_name='Changki Mo'  id=A5043708300
+      Last known inst(s): ['Washington State University Tri-Cities', "The First People's Hospital of Guiyang", "Wenzhou City People's Hospital", "Guizhou Provincial People's Hospital", "Gaozhou People's Hospital", 'Zhuhai Institute of Advanced Technology', 'Southwest Jiaotong University']
+      Top topics:         ['Advanced Sensor and Energy Harvesting Materials', 'Innovative Energy Harvesting Technologies', 'Energy Harvesting in Wireless Networks', 'Smart Agriculture and AI', 'Vibration Control and Rheological Fluids']
+  [C] WSU institution IDs found for this author: ['I16109614', 'I72951846']
+  [C] Recent articles (2024-04-26 -> 2026-04-26): 7
+  [C] Of those, WSU-affiliated works (used for counting): 2
+  [D] Papers fetched for keyword scoring: 10
+  [D] Keywords matched: 0 / 46
+      NO KEYWORDS MATCHED -- this author would be DROPPED by score_and_rank()
+  [D] Recent paper titles:
+      - [2025] AI-driven smartphone screening for acute COPD exacerbations: enhancing health equity in developing r
+      - [2025] Durable resin-based slippery coating with stable lubricating layer enabled by dual-bridging design
+      - [2025] Bioinspired Cellulose‐Based Ultra‐Slippery Film with Superior Transmittance, Anti‐Fouling and De‐Ici
+      - [2025] Identification and Validation of Key Genes Related to Lipophagy in Osteoporosis
+      - [2025] A vision-based robotic system for precision pollination of apples
+      - [2025] Integrating Strain Gauge Feedback with Adaptive Sliding Mode Motion Control for Piezoelectric Nanopo
+      - [2025] Design and Field Evaluation of an End Effector for Robotic Strawberry Harvesting
+      - [2023] Tracking Sensor Location by Video Analysis in Double-Shell Tank Inspections
+      - [2022] Internal freezing and heat loss of apple (Malus domestica Borkh.) and sweet cherry (Prunus avium L.)
+      - [2022] Cellulose nanocrystal dispersions improve cold tolerance in developing apple flowers
+
+========================================================================
+  [MISSING]  Charles Pezeshki
+========================================================================
+  [A] Found in OpenAlex:  display_name='Charles Pezeshki'  id=A5014652454
+      Last known inst(s): []
+      Top topics:         ['Engineering Education and Curriculum Development', 'Nonlinear Dynamics and Pattern Formation', 'Biomedical and Engineering Education', 'Engineering Education and Pedagogy', 'Chaos control and synchronization']
+  [B] WSU AFFILIATION MISSING in last_known_institutions
+  [C] WSU institution IDs found for this author: ['I72951846']
+  [C] Recent articles (2024-04-26 -> 2026-04-26): 1
+  [C] Of those, WSU-affiliated works (used for counting): 0
+  [D] Papers fetched for keyword scoring: 10
+  [D] Keywords matched: 0 / 46
+      NO KEYWORDS MATCHED -- this author would be DROPPED by score_and_rank()
+  [D] Recent paper titles:
+      - [2025] Generative AI and the Protégé Effect in the Classroom
+      - [2020] Understanding the Evolving Relationship between China and Latin America by Examining Engineering Edu
+      - [2020] Using Spiral Dynamics to Prepare Engineers for the Global Workforce
+      - [2020] Understanding Change and Development of Engineering Education in China
+      - [2020] Relational Development as a Cornerstone of Success in Latino STEM Retention
+      - [2020] Preparing Engineers For An Outsourced World—Strategies For Change
+      - [2020] Improving Performance And Reducing Professor Workload In A Capstone Design Class Using Project Manag
+      - [2020] (Tentative) Citizen Engineers: How We Engage State And Federal Governments On Behalf Of Engineering 
+      - [2020] Preparing Undergraduate Mechanical Engineering Students For The Global Marketplace—New Demands And R
+      - [2020] Managing A Capstone Design Clinic—Strategies For Pedagogic And Financial Success
+
+========================================================================
+  [MISSING]  Anura Rathnayake
+========================================================================
+  [A] Found in OpenAlex:  display_name='Anura P. Rathnayake'  id=A5057774313
+      Last known inst(s): ['Washington State University']
+      Top topics:         ['Plant Surface Properties and Treatments', 'Remote Sensing in Agriculture', 'Horticultural and Viticultural Research', 'Plant Water Relations and Carbon Dynamics', 'Plant Pathogens and Fungal Diseases']
+  [C] WSU institution IDs found for this author: ['I72951846']
+  [C] Recent articles (2024-04-26 -> 2026-04-26): 1
+  [C] Of those, WSU-affiliated works (used for counting): 1
+  [D] Papers fetched for keyword scoring: 8
+  [D] Keywords matched: 1 / 46
+      Matched: ['convex hull']
+  [D] Recent paper titles:
+      - [2025] Canopy Transpiration Mapping in an Apple Orchard Using High-Resolution Airborne Spectral and Thermal
+      - [2024] Evaluation of Suitable Base Spray Rate Estimation Methods for Precision Chemical Applications in Vin
+      - [2022] Horticultural Oil Thermotherapy Delivery System for Perennial Specialty Crops: A-Proof-of-Concept an
+      - [2021] High throughput canopy characterization of a commercial apple orchard using aerial RGB imagery
+      - [2021] Spray patterns and perceptive canopy interaction assessment of commercial airblast sprayers used in 
+      - [2021] Downwind Spray Drift Assessment for Airblast Sprayer Applications in a Modern Apple Orchard System
+      - [2019] Visible-near infrared spectroradiometry-based detection of grapevine leafroll-associated virus 3 in 
+      - [2018] Applicability of time-of-flight-based ground and multispectral aerial imaging for grapevine canopy v
+
+========================================================================
+  [MISSING]  John Swensen
+========================================================================
+  [A] Found in OpenAlex:  display_name='John Swensen'  id=A5026060597
+      Last known inst(s): ['Washington State University']
+      Top topics:         ['Soft Robotics and Applications', 'Parallel Computing and Optimization Techniques', 'Embedded Systems Design Techniques', 'Advanced Sensor and Energy Harvesting Materials', 'Modular Robots and Swarm Intelligence']
+  [C] WSU institution IDs found for this author: ['I170632171', 'I72951846']
+  [C] Recent articles (2024-04-26 -> 2026-04-26): 2
+  [C] Of those, WSU-affiliated works (used for counting): 2
+  [D] Papers fetched for keyword scoring: 10
+  [D] Keywords matched: 0 / 46
+      NO KEYWORDS MATCHED -- this author would be DROPPED by score_and_rank()
+  [D] Recent paper titles:
+      - [2025] A Guaranteed-Stable Neural Network Approach for Optimal Control of Nonlinear Systems
+      - [2024] Provably-stable neural network-based control of nonlinear systems
+      - [2022] Robotic needle steering: state-of-the-art and research challenges
+      - [2022] Characterization and modeling of a thermoplastic elastomer tissue simulant under uniaxial compressio
+      - [2021] A Novel Flexible Bio-Inspired Pneumatic Valve Adapter for Soft Robotic Vasculature
+      - [2020] Duty Cycling of Waterjet Can Improve Steerability and Radius-of-Curvature (ROC) for Waterjet Steerab
+      - [2020] Design of a Highly-Maneuverable Pneumatic Soft Actuator Driven by Intrinsic SMA Coils (PneuSMA Actua
+      - [2020] Resultant Radius of Curvature of Stylet-and-Tube Steerable Needles Based on the Mechanical Propertie
+      - [2020] Fracture-directed Waterjet Needle Steering: Design, Modeling, and Path Planning
+      - [2020] A Novel Bio-Inspired Pneumatic Valve Adapter for Soft Robotic Vasculature
+
+
+>>> CONTROL GROUP: PROFESSORS FOUND IN CSV <<<
+
+========================================================================
+  [EXPECTED FOUND]  Amit Bandyopadhyay
+========================================================================
+  [A] Found in OpenAlex:  display_name='Amit Bandyopadhyay'  id=A5000075961
+      Last known inst(s): ['Washington State University']
+      Top topics:         ['Bone Tissue Engineering Materials', 'Additive Manufacturing and 3D Printing Technologies', 'Orthopaedic implants and arthroplasty', 'Additive Manufacturing Materials and Processes', 'Titanium Alloys Microstructure and Properties']
+  [C] WSU institution IDs found for this author: ['I137317281', 'I170632171', 'I72951846']
+  [C] Recent articles (2024-04-26 -> 2026-04-26): 19
+  [C] Of those, WSU-affiliated works (used for counting): 15
+  [D] Papers fetched for keyword scoring: 10
+  [D] Keywords matched: 1 / 46
+      Matched: ['surrogate model']
+  [D] Recent paper titles:
+      - [2026] Discovery of Feasible 3D Printing Configurations for Metal Alloys via AI-Driven Adaptive Experimenta
+      - [2026] Contamination of 316L powder with Ti6Al4V during laser powder bed fusion
+      - [2025] Corrigendum to “Corrosion-fatigue of additively manufactured Ti6Al4V” [J. Mech. Behav. Biomed. Mater
+      - [2025] Corrosion-fatigue of additively manufactured Ti6Al4V
+      - [2025] Understanding the reusability of Ti6Al4V powder in laser powder bed fusion
+      - [2025] Metal additive manufacturing with powder and wire feedstocks
+      - [2025] Commercially pure titanium via wire arc directed energy deposition using localised shielding
+      - [2025] Hydroxyapatite-Reinforced, Infection-Resistant CoCrMo-3Cu for Load-Bearing Implants
+      - [2025] Body composition and cardiorespiratory fitness of Indian online delivery executives
+      - [2025] Evaluation of Work Related Musculoskeletal Disorders (WRMSDs) among Online Delivery Executives of Ko
+
+========================================================================
+  [EXPECTED FOUND]  Mehdi Hosseinzadeh
+========================================================================
+  [A] Found in OpenAlex:  display_name='Mehdi Hosseinzadeh'  id=A5058091799
+      Last known inst(s): ['Washington State University']
+      Top topics:         ['Advanced Control Systems Optimization', 'Fault Detection and Control Systems', 'Robotic Path Planning Algorithms', 'Adaptive Control of Nonlinear Systems', 'Microgrid Control and Optimization']
+  [C] WSU institution IDs found for this author: ['I72951846']
+  [C] Recent articles (2024-04-26 -> 2026-04-26): 16
+  [C] Of those, WSU-affiliated works (used for counting): 13
+  [D] Papers fetched for keyword scoring: 10
+  [D] Keywords matched: 5 / 46
+      Matched: ['response surface methodology', 'multi-objective optimization', 'decarbonization', 'machine learning', 'artificial intelligence']
+  [D] Recent paper titles:
+      - [2025] Dynamic Simulation and Optimization of an Innovative Cogeneration System Using TRNSYS, EES, and Resp
+      - [2025] Physically feasible dynamic model identification and constrained control of robotic arms: A case stu
+      - [2025] Thermoeconomic optimization of climate-adaptive solar and wind multi-generation systems using artifi
+      - [2025] CARE-HEAT: Improving Thermal Fairness and Efficiency in District Heating Networks
+      - [2025] Robust Steady-State-Aware Model Predictive Control for Systems with Limited Computational Resources 
+      - [2025] A Guaranteed-Stable Neural Network Approach for Optimal Control of Nonlinear Systems
+      - [2025] Safe and Efficient Robot Action Planning in the Presence of Unconcerned Humans
+      - [2025] Practical considerations for implementing robust-to-early termination model predictive control
+      - [2025] REAP-T: A MATLAB Toolbox for Implementing Robust-to-Early Termination Model Predictive Control
+      - [2024] Adaptive Scheduling for Real-Time Control
+
+========================================================================
+  [EXPECTED FOUND]  Satyajit Mojumder
+========================================================================
+  [A] Found in OpenAlex:  display_name='Satyajit Mojumder'  id=A5045547065
+      Last known inst(s): ['Northwestern University', 'Washington State University']
+      Top topics:         ['Nanofluid Flow and Heat Transfer', 'Heat Transfer Mechanisms', 'Microstructure and mechanical properties', 'Metal and Thin Film Mechanics', 'Aluminum Alloys Composites Properties']
+  [C] WSU institution IDs found for this author: ['I72951846']
+  [C] Recent articles (2024-04-26 -> 2026-04-26): 8
+  [C] Of those, WSU-affiliated works (used for counting): 6
+  [D] Papers fetched for keyword scoring: 10
+  [D] Keywords matched: 3 / 46
+      Matched: ['surrogate model', 'Gaussian process', 'machine learning']
+  [D] Recent paper titles:
+      - [2025] Mitigating data incompleteness in additive manufacturing using imputation techniques
+      - [2025] Surrogate-Assisted Adaptive Experimentation for Fused Filament Fabrication Process Optimization
+      - [2025] Data-driven insights into melt pool dynamics and energy absorption in the laser powder bed fusion pr
+      - [2025] Multiscale Modeling of Process‐Induced Defects in Fused Filament Fabrication‐Printed Materials
+      - [2025] Adaptive sampling-based surrogate modeling for composite performance prediction
+      - [2025] Computational discovery of a novel double transition metal nitride MXene and its applications as an 
+      - [2024] Uncertainty quantification and propagation for multiscale materials systems with agglomeration and s
+      - [2024] Statistical parameterized physics-based machine learning digital shadow models for laser powder bed 
+      - [2024] Simulation-free determination of microstructure representative volume element size via Fisher scores
+      - [2024] Physics guided heat source for quantitative prediction of IN718 laser additive manufacturing process
+
+========================================================================
+  [EXPECTED FOUND]  Lloyd Smith
+========================================================================
+  [A] Found in OpenAlex:  display_name='Lloyd M. Smith'  id=A5022080753
+      Last known inst(s): ['University of Wisconsin–Madison']
+      Top topics:         ['Advanced Proteomics Techniques and Applications', 'Mass Spectrometry Techniques and Applications', 'Advanced biosensing and bioanalysis techniques', 'RNA and protein synthesis mechanisms', 'Metabolomics and Mass Spectrometry Studies']
+  [B] WSU AFFILIATION MISSING in last_known_institutions
+  [C] WSU institution IDs found for this author: ['I170632171', 'I72951846']
+  [C] Recent articles (2024-04-26 -> 2026-04-26): 16
+  [C] Of those, WSU-affiliated works (used for counting): 0
+  [D] Papers fetched for keyword scoring: 10
+  [D] Keywords matched: 0 / 46
+      NO KEYWORDS MATCHED -- this author would be DROPPED by score_and_rank()
+  [D] Recent paper titles:
+      - [2026] A small molecule dual inhibitor of agr quorum sensing and ATP synthase blocks acute and chronic viru
+      - [2026] A small molecule dual inhibitor of agr quorum sensing and ATP synthase blocks acute and chronic viru
+      - [2026] Interactome screening implicates BAG6 as a suppressor of UBQLN2 misfolding in ALS/FTD
+      - [2025] DNA-damage dependent isoform switching modulates RIF1 DNA repair complex assembly and phase separati
+      - [2025] Directed Evolution of APOX for Proximity Labeling Using Phenols with High Redox Potentials
+      - [2025] Chemoselective Characterization of New Extracellular Matrix Deposition in Bioengineered Tumor Tissue
+      - [2025] IsoBayes: a Bayesian approach for single-isoform proteomics inference
+      - [2025] Identifying lncRNA–Protein Interactions in Hematopoietic Progenitor Cells by Hybridization Capture a
+      - [2025] Improved Detection of Differentially Abundant Proteins through FDR-Control of Peptide-Identity-Propa
+      - [2025] A Fast Neural Network for Isotopic Charge State Assignment
+
+
+========================================================================
+  DIAGNOSTIC SUMMARY
+========================================================================
+Name                          OA?  WSU?  Rec   KW  Failure stage
+------------------------------------------------------------------------
+  [N] Hu Yueqi                    Y     N    0    1  B - Not affiliated with WSU in OpenAlex
+  [N] Emily Larsen                Y     Y    1    0  C - Only 1 recent paper(s) (need 3)
+  [N] Changki Mo                  Y     Y    7    0  C - Only 2 WSU-affiliated papers in window (need 3)
+  [N] Charles Pezeshki            Y     N    1    0  B - Not affiliated with WSU in OpenAlex
+  [N] Anura Rathnayake            Y     Y    1    1  C - Only 1 recent paper(s) (need 3)
+  [N] John Swensen                Y     Y    2    0  C - Only 2 recent paper(s) (need 3)
+  [Y] Amit Bandyopadhyay          Y     Y   19    1  NONE (should be in CSV)
+  [Y] Mehdi Hosseinzadeh          Y     Y   16    5  NONE (should be in CSV)
+  [Y] Satyajit Mojumder           Y     Y    8    3  NONE (should be in CSV)
+  [Y] Lloyd Smith                 Y     N   16    0  B - Not affiliated with WSU in OpenAlex
+
+
+========================================================================
+  PER-PROFESSOR NOTES & ROOT CAUSES
+========================================================================
+
+  [MISSING] Hu Yueqi
+    Top topics : ['Data Visualization and Analytics', 'Vehicle emissions and performance', 'Time Series Analysis and Forecasting', 'Video Analysis and Summarization', 'Air Quality Monitoring and Forecasting']
+    Matched KWs: ['machine learning']
+    [!] Last known institution(s) in OpenAlex: ['University of North Carolina at Charlotte', 'Beijing Municipal Ecological and Environmental Monitoring Center']. WSU not among them — fetch_authors_by_institutions would miss this author unless they published a WSU-affiliated paper in the date window.
+    [!] Only 0 article(s) in the last 2 years in OpenAlex. MIN_PAPERS=3 threshold not met.
+    [!] Only 0 recent works have an explicit WSU affiliation in OpenAlex metadata.
+
+  [MISSING] Emily Larsen
+    Top topics : ['Design Education and Practice', 'Smart Grid Security and Resilience', 'Power Systems Fault Detection', 'Manufacturing Process and Optimization', 'Recycling and Waste Management Techniques']
+    Matched KWs: []
+    [!] Only 1 article(s) in the last 2 years in OpenAlex. MIN_PAPERS=3 threshold not met.
+    [!] Only 1 recent works have an explicit WSU affiliation in OpenAlex metadata.
+
+  [MISSING] Changki Mo
+    Top topics : ['Advanced Sensor and Energy Harvesting Materials', 'Innovative Energy Harvesting Technologies', 'Energy Harvesting in Wireless Networks', 'Smart Agriculture and AI', 'Vibration Control and Rheological Fluids']
+    Matched KWs: []
+    [!] Only 2 recent works have an explicit WSU affiliation in OpenAlex metadata.
+
+  [MISSING] Charles Pezeshki
+    Top topics : ['Engineering Education and Curriculum Development', 'Nonlinear Dynamics and Pattern Formation', 'Biomedical and Engineering Education', 'Engineering Education and Pedagogy', 'Chaos control and synchronization']
+    Matched KWs: []
+    [!] Last known institution(s) in OpenAlex: []. WSU not among them — fetch_authors_by_institutions would miss this author unless they published a WSU-affiliated paper in the date window.
+    [!] Only 1 article(s) in the last 2 years in OpenAlex. MIN_PAPERS=3 threshold not met.
+    [!] Only 0 recent works have an explicit WSU affiliation in OpenAlex metadata.
+
+  [MISSING] Anura Rathnayake
+    Top topics : ['Plant Surface Properties and Treatments', 'Remote Sensing in Agriculture', 'Horticultural and Viticultural Research', 'Plant Water Relations and Carbon Dynamics', 'Plant Pathogens and Fungal Diseases']
+    Matched KWs: ['convex hull']
+    [!] Only 1 article(s) in the last 2 years in OpenAlex. MIN_PAPERS=3 threshold not met.
+    [!] Only 1 recent works have an explicit WSU affiliation in OpenAlex metadata.
+
+  [MISSING] John Swensen
+    Top topics : ['Soft Robotics and Applications', 'Parallel Computing and Optimization Techniques', 'Embedded Systems Design Techniques', 'Advanced Sensor and Energy Harvesting Materials', 'Modular Robots and Swarm Intelligence']
+    Matched KWs: []
+    [!] Only 2 article(s) in the last 2 years in OpenAlex. MIN_PAPERS=3 threshold not met.
+    [!] Only 2 recent works have an explicit WSU affiliation in OpenAlex metadata.
+
+  [FOUND] Amit Bandyopadhyay
+    Top topics : ['Bone Tissue Engineering Materials', 'Additive Manufacturing and 3D Printing Technologies', 'Orthopaedic implants and arthroplasty', 'Additive Manufacturing Materials and Processes', 'Titanium Alloys Microstructure and Properties']
+    Matched KWs: ['surrogate model']
+
+  [FOUND] Mehdi Hosseinzadeh
+    Top topics : ['Advanced Control Systems Optimization', 'Fault Detection and Control Systems', 'Robotic Path Planning Algorithms', 'Adaptive Control of Nonlinear Systems', 'Microgrid Control and Optimization']
+    Matched KWs: ['response surface methodology', 'multi-objective optimization', 'decarbonization', 'machine learning', 'artificial intelligence']
+
+  [FOUND] Satyajit Mojumder
+    Top topics : ['Nanofluid Flow and Heat Transfer', 'Heat Transfer Mechanisms', 'Microstructure and mechanical properties', 'Metal and Thin Film Mechanics', 'Aluminum Alloys Composites Properties']
+    Matched KWs: ['surrogate model', 'Gaussian process', 'machine learning']
+
+  [FOUND] Lloyd Smith
+    Top topics : ['Advanced Proteomics Techniques and Applications', 'Mass Spectrometry Techniques and Applications', 'Advanced biosensing and bioanalysis techniques', 'RNA and protein synthesis mechanisms', 'Metabolomics and Mass Spectrometry Studies']
+    Matched KWs: []
+    [!] Last known institution(s) in OpenAlex: ['University of Wisconsin–Madison']. WSU not among them — fetch_authors_by_institutions would miss this author unless they published a WSU-affiliated paper in the date window.
+    [!] Only 0 recent works have an explicit WSU affiliation in OpenAlex metadata.
+
+
+========================================================================
+  KEYWORD GAP ANALYSIS
+  (Topics found in missing profs that have NO matching keyword)
+========================================================================
+  Top topics across 6 missing professors:
+    2x  Advanced Sensor and Energy Harvesting Materials
+    1x  Data Visualization and Analytics
+    1x  Vehicle emissions and performance
+    1x  Time Series Analysis and Forecasting
+    1x  Video Analysis and Summarization
+    1x  Air Quality Monitoring and Forecasting
+    1x  Design Education and Practice
+    1x  Smart Grid Security and Resilience
+    1x  Power Systems Fault Detection
+    1x  Manufacturing Process and Optimization
+    1x  Recycling and Waste Management Techniques
+    1x  Innovative Energy Harvesting Technologies
+    1x  Energy Harvesting in Wireless Networks
+    1x  Smart Agriculture and AI
+    1x  Vibration Control and Rheological Fluids
+    1x  Engineering Education and Curriculum Development
+    1x  Nonlinear Dynamics and Pattern Formation
+    1x  Biomedical and Engineering Education
+    1x  Engineering Education and Pedagogy
+    1x  Chaos control and synchronization

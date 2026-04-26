@@ -122,6 +122,13 @@ DEFAULT_KEYWORDS = [
     "energy optimization",
     "decarbonization",
     "energy transition",
+    "manufacturing",
+    "robotics",
+    "energy harvesting",
+    "vibration",
+    "control systems",
+    "additive manufacturing",
+    "digital shadow",
 
     # Low discrimination — broad but still additive
     "machine learning",
@@ -136,7 +143,7 @@ TO_DATE   = date.today().strftime("%Y-%m-%d")
 FROM_DATE = date(date.today().year - 2, date.today().month, date.today().day).strftime("%Y-%m-%d")
 
 MIN_PAPERS    = 3        # minimum papers in the date window to qualify
-MAX_AUTHORS   = 1000      # cap on how many authors to process (API budget)
+MAX_AUTHORS   = 1500     # cap on how many authors to process (API budget)
 LAST_N_PAPERS = 10       # papers to fetch per author for keyword scoring
 
 BASE_URL = "https://api.openalex.org"
@@ -774,20 +781,11 @@ def save_csv(ranked: list[dict], field: str, keywords: list[str]) -> str:
     """Write ranked results to a CSV. Returns the file path."""
     "SAVES CSV with filename pattern: ranked_professors_run{N}_{field}_{kw1_kw2}.csv"
 
-    # Read, increment, and save run counter
-    env_path  = os.path.join(os.path.dirname(__file__), ".env")
-    run_count = int(os.getenv("RUN_COUNT", "0")) + 1
-
-    # Rewrite the RUN_COUNT line in .env
-    with open(env_path, "r") as f:
-        env_lines = f.readlines()
-    with open(env_path, "w") as f:
-        for line in env_lines:
-            f.write(f"RUN_COUNT={run_count}\n" if line.startswith("RUN_COUNT=") else line)
-
-    # Build filename: run number + first 2 keywords
-    kw_slug  = "_".join(kw.replace(" ", "-") for kw in keywords[:2])
-    out_path = f"ranked_professors_run{run_count}_{kw_slug}.csv"
+    # Build filename: ranked_professors_<state_or_uni_or_field>_<first_two_keywords>.csv
+    label_slug = (field or DEFAULT_FIELD).strip().replace(" ", "-")
+    kw_slug    = "_".join(kw.strip().replace(" ", "-") for kw in (keywords[:2] if keywords else DEFAULT_KEYWORDS[:2]))
+    out_path   = f"ranked_professors_{label_slug}_{kw_slug}.csv"
+    
     base_cols = [
         "rank", "score", "kw_matched", "kw_total", "name", "institution",
         "department", "openalex_url", "orcid",

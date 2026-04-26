@@ -1,0 +1,262 @@
+%-------------------------
+% Resume in LaTeX -- Jake's Resume Template
+% https://github.com/jakegut/resume
+%-------------------------
+
+\documentclass[letterpaper,11pt]{article}
+\usepackage{fontawesome5} % in preamble
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Section formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+
+\newcommand{\resumeItem}[1]{
+  \item\small{#1 \vspace{-2pt}}
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+  \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    {\Huge \scshape Syed Mehdi Ali Rizvi} \\ \vspace{4pt}
+    \small
+    \faMapMarkerAlt\ Lahore, Pakistan \,|\,  
+    \faEnvelope\ \href{mailto:mehdialirizvi8446@gmail.com}{mehdialirizvi8446@gmail.com} \,|\, 
+    \faLinkedin\ \href{https://linkedin.com/in/mehdi-ali-rizvi}{Mehdi Ali Rizvi} \,|\, 
+    \faGithub\ \href{https://github.com/MehdiAliRizvi571}{MehdiAliRizvi571}
+\end{center}
+
+%-----------RESEARCH PROFILE-----------
+\section{Research Profile}
+\vspace{2pt}
+\small{
+Mechanical engineer specialising in \textbf{ML-driven multi-objective optimisation}, with expertise in physics-informed surrogate modelling, evolutionary algorithms, and knowledge graph pipelines. Research includes combustion optimisation of fuel blends, industrial digital twins, and thermal systems. Seeking a PhD at the intersection of \textbf{artificial intelligence and sustainable mechanical engineering}, with an interest in AI-assisted modelling and design.
+}
+\vspace{2pt}
+
+%-----------EDUCATION-----------
+\section{Education}
+\resumeSubHeadingListStart
+  \resumeSubheading
+    {University of Engineering and Technology (UET) Lahore}{Lahore, Pakistan}
+    {B.S.\ Mechanical Engineering \quad $|$ \quad CGPA: 3.47 / 4.0 \quad $|$ \quad EQF Level 6}{Oct 2020 -- Aug 2024}
+    \resumeItemListStart
+      \resumeItem{Research Assistant, \textit{Renewable Systems Engineering Lab}, supervised by Dr.\ Muhammad Usman (PhD).}
+      \resumeItem{Thesis: \textit{Simulation Modelling and Analysis of Automobile Production Processes Using Digital Twins} --- Grade: \textbf{A}. Industry Capstone Project}
+    \resumeItemListEnd
+\resumeSubHeadingListEnd
+
+%-----------PUBLICATIONS-----------
+\section{Publications}
+\begin{itemize}[leftmargin=0.15in, label={}, itemsep=4pt]
+
+  \item \small{
+    Usman M., \textbf{Rizvi S.M.M.A.}, Ali M.S., Riaz F., Saeed M., \& Abo-Zahhad E.M.\ (2026).
+    \textit{Multi-Objective Prediction and Optimisation of Alcohol--Gasoline SI Engines using a Hybrid Gradient Boosting and Evolutionary Algorithm Framework.}
+    \textbf{Results in Engineering}, Elsevier \textbf{(Impact Factor: 7.9, Q1)}.
+    \href{https://www.sciencedirect.com/science/article/pii/S2590123026012375}{\underline{doi:10.1016/j.rineng.2026.110203}}
+  }
+
+\item \small{
+Saqib S., Ali M.S., \textbf{Rizvi S.M.M.A.}, Maqsood B., et al.\ (2026).
+\textit{Data-Constrained AI Optimisation of Solketal--Gasoline Blends for Low-Emission Engine Operation.}
+Presented at \textbf{European Seminar on AI for Sustainability and Climate Change}, Hamburg (remote).
+Also accepted as a book chapter in: \textit{AI and the Green Transition: European Perspectives on Sustainable Innovation}, \textbf{World Sustainability Series}, Springer Nature.
+Preprint: \href{https://doi.org/10.5281/zenodo.18451750}{\underline{doi:10.5281/zenodo.18451750}}
+}
+
+\end{itemize}
+
+%-----------WORK EXPERIENCE-----------
+\section{Work Experience}
+\resumeSubHeadingListStart
+
+  \resumeSubheading
+    {University of Engineering and Technology (UET) Lahore}{Lahore, Pakistan}
+    {Research Associate --- Renewable Systems Engineering Lab}{Feb 2024 -- Present}
+    \resumeItemListStart
+      \resumeItem{Designed and executed multi-channel SI engine experiments (1,700--3,800 rpm; two load settings) measuring 8 simultaneous performance and emissions outputs for 1-propanol--gasoline blends.}
+      \resumeItem{Developed a three-tier ML optimisation framework: \textbf{Gradient Boosting} for multi-output prediction (brake power R$^{2}$\,=\,0.99; BTE R$^{2}$\,=\,0.95), \textbf{RSM} for response surface mapping, and \textbf{NSGA-III} for Pareto-optimal operating point search---yielding an AI-based suggestion that led to a 31\% increase in brake power, 29\% increase in torque, and 37\% reduction in CO/HC emissions vs.\ pure gasoline.}
+      \resumeItem{Constructed \textbf{XGBoost} surrogate models embedded within NSGA-III with convex-hull feasibility filtering and trust-region proximity constraints for data-scarce optimisation of solketal--gasoline blends; predicted 4.6\% NOx and 16.6\% HC reductions while quantifiably limiting extrapolation risk.}
+    \resumeItemListEnd
+
+  \resumeSubheading
+    {CureMD}{New York, USA (Remote)}
+    {AI Engineer --- Machine Learning And Optimisation}{Jul 2024 -- Present}
+    \resumeItemListStart
+      \resumeItem{Designed an ML/LLM pipeline integrated with \textbf{Neo4j} graph databases to extract structured data from complex unstructured clinical reports, achieving 92\% extraction accuracy and $\sim$13-second processing per report.}
+      \resumeItem{Built trial-matching systems linking disparate clinical databases via Knowledge Graphs, improving patient-matching efficiency by 75\%.}
+    \resumeItemListEnd
+
+\resumeSubHeadingListEnd
+
+%-----------PROJECTS-----------
+\section{Projects}
+\resumeSubHeadingListStart
+
+  \resumeProjectHeading
+    {\textbf{Industrial Digital Twin for Process Optimisation} $|$ \emph{Tecnomatix Plant Simulation}}
+    {Oct 2023 -- Jul 2024}
+    \resumeItemListStart
+      \resumeItem{Built a high-fidelity \textbf{Digital Shadow} of two production lines (Pivot Oil Pump; CG125 Pipe Seat) in Tecnomatix Plant Simulation by manually collecting and encoding factory-floor lead times and process flows---extending the model toward a full Digital Twin architecture.}
+      \resumeItem{Ran stochastic iterative simulations across layout and scheduling scenarios; finalised recommendations based on practical applicability, projecting monthly electricity savings of \textbf{PKR\,24,555} (Pump line) and \textbf{PKR\,14,624} (Pipe Seat line).}
+      \resumeItem{Delivered financial feasibility analysis and implementation-ready recommendations; project graded \textbf{A} and adopted as baseline for Industry 4.0 adoption in Pakistan's manufacturing sector.}
+    \resumeItemListEnd
+
+  \resumeProjectHeading
+    {\textbf{Solar-Powered HVAC Integration for Railway Decarbonisation}
+    $|$ \emph{HAP, PVsyst}}
+    {Jan 2023 -- Mar 2023}
+    \resumeItemListStart
+      \resumeItem{Conducted a techno-economic analysis to decarbonise Pakistan Railways via solar-powered HVAC; performed thermal load modelling (HAP) and solar irradiance simulation (PVsyst) for standard train cabins.}
+      \resumeItem{Validated system design projected to eliminate \textbf{31,025\,kg CO$_{2}$ annually} and reduce the train's specific carbon footprint by 2.35\%, demonstrating decentralised renewable generation at the transportation level.}
+    \resumeItemListEnd
+
+  \resumeProjectHeading
+    {\textbf{Compressed-Air Crossflow Turbine Design \& Prototype}
+    $|$ \emph{SolidWorks}}
+    {Nov 2022 -- Jan 2023}
+    \resumeItemListStart
+      \resumeItem{Engineered a low-cost Crossflow Turbine for energy recovery from compressed fluid expansion using SolidWorks parametric CAD; conducted material selection and manufacturing cost analysis to balance structural integrity with economic feasibility.}
+      \resumeItem{Delivered a functional prototype generating \textbf{{$>$}8\,W} from compressed air, demonstrating applied fluid dynamics and rotary equipment design skills transferable to hydrogen compressor systems.}
+    \resumeItemListEnd
+
+\resumeSubHeadingListEnd
+
+%-----------TECHNICAL SKILLS-----------
+\section{Technical Skills}
+\begin{itemize}[leftmargin=0.15in, label={}]
+  \small{\item{
+    \textbf{ML \& AI:}{ Python, XGBoost, Gradient Boosting, NSGA-III, Deep Learning, Surrogate Modelling, LLM Pipelines} \\
+    \textbf{Optimisation:}{ Multi-Objective Optimisation, Response Surface Methodology (RSM), Evolutionary Algorithms} \\
+    \textbf{Simulation \& CAD:}{ MATLAB, Tecnomatix Plant Simulation, SolidWorks, PVsyst, HAP} \\
+    \textbf{Databases \& Systems:}{ Neo4j (Graph Databases), SQL, Digital Twins, Cyber-Physical Systems (CPS)} \\
+    \textbf{Sustainability:}{ Life Cycle Analysis (LCA), Techno-Economic Analysis, Energy Optimisation}
+  }}
+\end{itemize}
+
+%-----------CERTIFICATIONS-----------
+\section{Certifications}
+\resumeSubHeadingListStart
+
+  \resumeProjectHeading
+    {\textbf{Deep Learning} $|$ \emph{Coursera / DeepLearning.AI}}{Feb 2025}
+
+  \resumeProjectHeading
+    {\href{https://www.coursera.org/account/accomplishments/specialization/9FTS50FKL6HB}{\textbf{Data Science with Python}} $|$ \emph{Coursera}}{Jan 2025}
+
+  \resumeProjectHeading
+    {\href{https://www.coursera.org/account/accomplishments/verify/8EKNAG8WUNZP}{\textbf{Introduction to Data Engineering}} $|$ \emph{Coursera}}{Nov 2024}
+
+  \resumeProjectHeading
+    {\href{https://www.coursera.org/account/accomplishments/specialization/8HSQNGIYYFFG}{\textbf{Mathematics for Machine Learning}} $|$ \emph{Coursera}}{Jul 2024}
+
+  \resumeProjectHeading
+    {\href{https://www.coursera.org/account/accomplishments/verify/0VW2QFBP8SC3}{\textbf{Applied Social Network Analysis in Python}} $|$ \emph{Coursera}}{Feb 2024}
+
+\resumeSubHeadingListEnd
+
+%-----------PRESENTATIONS & WORKSHOPS-----------
+\section{Presentations \& Workshops}
+\resumeSubHeadingListStart
+
+  \resumeProjectHeading
+    {\textbf{European Seminar on AI for Sustainability and Climate Change}
+    $|$ \emph{Hamburg, Germany (Remote)}}
+    {Jan 2026}
+    \resumeItemListStart
+      \resumeItem{Presented peer-reviewed paper on data-constrained AI optimisation of solketal--gasoline blends for low-emission SI engine operation; audience of European AI and sustainability researchers.}
+    \resumeItemListEnd
+
+  \resumeProjectHeading
+    {\textbf{ASHRAE Learning Portal--- Technical Workshop Lead}
+    $|$ \emph{UET Lahore}}
+    {Dec 2020 -- Feb 2024}
+    \resumeItemListStart
+      \resumeItem{Delivered structured MATLAB and MS Office workshops for freshman engineering cohorts; led a team that achieved a 30\% increase in user engagement and knowledge retention.}
+    \resumeItemListEnd
+
+  \resumeProjectHeading
+    {\textbf{Debating Mentor \& Coach}
+    $|$ \emph{UET Debating Society, Lahore}}
+    {Dec 2020 -- Dec 2023}
+    \resumeItemListStart
+      \resumeItem{Organised mock sessions coaching 20+ junior members in argumentation, public speaking, and current affairs; won Best Speaker awards at Kinnaird College, GCU, and Shahjiwana; ranked \textbf{2nd Best Speaker} at an international competition representing UET Lahore.}
+    \resumeItemListEnd
+
+\resumeSubHeadingListEnd
+
+%-----------LANGUAGES-----------
+\section{Languages}
+\begin{itemize}[leftmargin=0.15in, label={}]
+  \small{\item{
+    \textbf{English:} Proficient --- IELTS Overall Band \textbf{8.0}
+  }}
+\end{itemize}
+%-----------SKILLS-----------
+\section{Skills}
+\small{
+\textbf{Programming:} MATLAB, Python, SQL \\ 
+\textbf{Data \& Systems:} Smart Manufacturing, Knowledge Graphs, Digital Twins \\ 
+\textbf{Engineering \& Analysis:} Life Cycle Analysis (LCA), Technical Feasibility Analysis, Energy Optimisation \\ 
+\textbf{AI \& Optimisation:} Machine Learning Models, Optimisation Algorithms, Genetic Algorithms}
+\end{document}
