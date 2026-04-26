@@ -29,9 +29,12 @@ import re
 import csv
 import json
 import time
+import random
 import argparse
 import requests
+from typing import Optional
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from datetime import date
 
@@ -41,6 +44,9 @@ from datetime import date
 # from openai import OpenAI
 
 load_dotenv()
+
+# ── PARALLEL PROCESSING CONFIG ─────────────────────────────────────────────────
+MAX_PARALLEL_WORKERS = 15  # Number of parallel API calls for enriching profiles and fetching papers
 
 # ── DEFAULTS (overridden by CLI args) ──────────────────────────────────────────
 
@@ -174,25 +180,31 @@ HEADERS  = {"User-Agent": f"professor-ranker/1.0 (mailto:{EMAIL})"}
 
 # ── HELPERS ────────────────────────────────────────────────────────────────────
 
-def api_get(url: str, params: dict | None = None, retries: int = 5) -> dict:
-    """GET with exponential back-off for rate-limit / server errors."""
+def api_get(url: str, params: Optional[dict] = None, retries: int = 5) -> dict:
+    """GET with exponential back-off with jitter for rate-limit / server errors."""
     for attempt in range(retries):
         try:
             r = requests.get(url, headers=HEADERS, params=params, timeout=30)
             if r.status_code == 200:
                 return r.json()
             if r.status_code == 429:
-                wait = 2 ** attempt
-                print(f"  [429 rate-limit] waiting {wait}s ...")
+                base_wait = 2 ** attempt
+                jitter = random.uniform(0, 0.5 * base_wait)
+                wait = base_wait + jitter
+                print(f"  [429 rate-limit] waiting {wait:.2f}s ...")
                 time.sleep(wait)
             elif r.status_code >= 500:
-                time.sleep(2 ** attempt)
+                base_wait = 2 ** attempt
+                jitter = random.uniform(0, 0.5 * base_wait)
+                time.sleep(base_wait + jitter)
             else:
                 print(f"  [HTTP {r.status_code}] {url}")
                 return {}
         except requests.RequestException as exc:
             print(f"  [network error] {exc} -- retry {attempt + 1}")
-            time.sleep(2 ** attempt)
+            base_wait = 2 ** attempt
+            jitter = random.uniform(0, 0.5 * base_wait)
+            time.sleep(base_wait + jitter)
     return {}
 
 
@@ -214,7 +226,7 @@ def paginate(url: str, params: dict, max_results: int = 10_000) -> list[dict]:
     return results
 
 
-def reconstruct_abstract(inverted_index: dict | None) -> str:
+def reconstruct_abstract(inverted_index: Optional[dict]) -> str:
     """
     OpenAlex stores abstracts as an inverted index:
         { "word": [pos1, pos2, ...], ... }
@@ -618,57 +630,72 @@ def _author_matches_department(author_data: dict) -> bool:
     return False
 
 
+def _fetch_author_batch(batch: list[str], authors: dict[str, dict], no_dept_filter: bool) -> tuple[dict[str, dict], int]:
+    """Helper function to fetch a single batch of author profiles."""
+    enriched = {}
+    filtered_out = 0
+    filter_str = "|".join(batch)
+    
+    data = api_get(f"{BASE_URL}/authors", {
+        "filter": f"openalex_id:{filter_str}",
+        "per_page": len(batch),
+    })
+    
+    for author_data in data.get("results", []):
+        aid = author_data["id"].split("/")[-1]
+        
+        # ── Department verification: skip authors whose topics don't overlap ──
+        if not no_dept_filter and not _author_matches_department(author_data):
+            filtered_out += 1
+            continue
+        
+        # ── Use last_known_institutions for CORRECT institution ──
+        institution = _pick_institution(author_data,
+                                        fallback=authors.get(aid, {}).get("institution", "Unknown"))
+        
+        enriched[aid] = {
+            **authors.get(aid, {}),
+            "institution":    institution,
+            "orcid":          (author_data.get("ids") or {}).get("orcid", ""),
+            "works_count":    author_data.get("works_count", 0),
+            "cited_by_count": author_data.get("cited_by_count", 0),
+            "h_index":        (author_data.get("summary_stats") or {}).get("h_index", 0),
+            "homepage_url":   author_data.get("homepage_url", ""),
+            "openalex_url":   author_data.get("id", ""),
+            "top_topics":     "; ".join(
+                t.get("display_name", "")
+                for t in (author_data.get("topics") or [])[:3]
+            ),
+        }
+    
+    return enriched, filtered_out
+
+
 def fetch_author_profiles(authors: dict[str, dict], no_dept_filter: bool = False) -> dict[str, dict]:
-    print(f"\n[3/6] Fetching author profiles (up to {MAX_AUTHORS}) ...")
+    print(f"\n[3/6] Fetching author profiles (up to {MAX_AUTHORS}) in parallel ({MAX_PARALLEL_WORKERS} workers) ...")
     enriched = {}
     filtered_out = 0
     ids = list(authors.keys())[:MAX_AUTHORS]
 
-    # Process in batches of 50 instead of one by one
+    # Process in batches of 50, but run multiple batches in parallel
     batch_size = 50
-    for batch_start in range(0, len(ids), batch_size):
-        batch = ids[batch_start: batch_start + batch_size]
-        filter_str = "|".join(batch)
-
-        data = api_get(f"{BASE_URL}/authors", {
-            "filter": f"openalex_id:{filter_str}",
-            "per_page": batch_size,
-        })
-
-        for author_data in data.get("results", []):
-            aid = author_data["id"].split("/")[-1]
-
-            # ── Department verification: skip authors whose topics don't overlap ──
-            if not no_dept_filter and not _author_matches_department(author_data):
-                filtered_out += 1
-                continue
-
-            # ── Use last_known_institutions for CORRECT institution ──
-            institution = _pick_institution(author_data,
-                                            fallback=authors.get(aid, {}).get("institution", "Unknown"))
-
-            enriched[aid] = {
-                **authors.get(aid, {}),
-                "institution":    institution,
-                "orcid":          (author_data.get("ids") or {}).get("orcid", ""),
-                "works_count":    author_data.get("works_count", 0),
-                "cited_by_count": author_data.get("cited_by_count", 0),
-                "h_index":        (author_data.get("summary_stats") or {}).get("h_index", 0),
-                "homepage_url":   author_data.get("homepage_url", ""),
-                "openalex_url":   author_data.get("id", ""),
-                "top_topics":     "; ".join(
-                    t.get("display_name", "")
-                    for t in (author_data.get("topics") or [])[:3]
-                ),
-            }
-        print(f"  ... {min(batch_start + batch_size, len(ids))}/{len(ids)} profiles fetched")
-        time.sleep(0.05)
-
-    # Fill in any authors missing from batch results
-    for aid in ids:
-        if aid not in enriched:
-            # Don't add authors that weren't returned by API (likely filtered)
-            pass
+    batches = [ids[i:i + batch_size] for i in range(0, len(ids), batch_size)]
+    
+    with ThreadPoolExecutor(max_workers=MAX_PARALLEL_WORKERS) as executor:
+        # Submit all batch jobs
+        future_to_batch = {
+            executor.submit(_fetch_author_batch, batch, authors, no_dept_filter): idx
+            for idx, batch in enumerate(batches)
+        }
+        
+        # Collect results as they complete
+        completed = 0
+        for future in as_completed(future_to_batch):
+            batch_enriched, batch_filtered = future.result()
+            enriched.update(batch_enriched)
+            filtered_out += batch_filtered
+            completed += 1
+            print(f"  ... {completed}/{len(batches)} batches completed ({len(enriched)} profiles so far)")
 
     dept_msg = "(dept filter OFF)" if no_dept_filter else f"{filtered_out} filtered (wrong department)"
     print(f"  Done -- {len(enriched)} profiles enriched, {dept_msg}")
@@ -676,51 +703,70 @@ def fetch_author_profiles(authors: dict[str, dict], no_dept_filter: bool = False
 
 # ── STEP 4: Last N papers per author ──────────────────────────────────────────
 
+def _fetch_author_papers(aid: str) -> tuple[str, list[dict], str]:
+    """Helper function to fetch papers for a single author."""
+    data = api_get(f"{BASE_URL}/works", {
+        "filter":   f"authorships.author.id:{aid},type:article",
+        "sort":     "publication_date:desc",
+        "per_page": LAST_N_PAPERS,
+        "select":   "id,title,doi,publication_year,abstract_inverted_index,primary_location,authorships",
+    })
+    papers = []
+    dept = ""
+    dept_found = False
+    
+    for w in data.get("results", []):
+        source = (w.get("primary_location") or {}).get("source") or {}
+        papers.append({
+            "title":    w.get("title", ""),
+            "doi":      w.get("doi", ""),
+            "year":     w.get("publication_year", ""),
+            "journal":  source.get("display_name", ""),
+            "abstract": reconstruct_abstract(w.get("abstract_inverted_index")),
+        })
+        # Extract department from the most recent paper where this author appears
+        if not dept_found:
+            for auth in (w.get("authorships") or []):
+                if aid in ((auth.get("author") or {}).get("id") or ""):
+                    raw = auth.get("raw_affiliation_strings") or []
+                    dept = parse_department(raw)
+                    if dept:
+                        dept_found = True
+                    break
+    
+    return aid, papers, dept
+
+
 def fetch_recent_papers(author_ids: list[str]) -> tuple[dict[str, list[dict]], dict[str, str]]:
     """
-    Fetch the most recent LAST_N_PAPERS articles for each author.
+    Fetch the most recent LAST_N_PAPERS articles for each author in parallel.
     Also extracts the raw affiliation string from the most recent paper to
     derive a department name via parse_department().
     Returns (author_papers, author_departments).
     """
-    print(f"\n[4/6] Fetching last {LAST_N_PAPERS} papers per author ...")
+    print(f"\n[4/6] Fetching last {LAST_N_PAPERS} papers per author in parallel ({MAX_PARALLEL_WORKERS} workers) ...")
     author_papers = {}
     author_departments: dict[str, str] = {}
 
-    for i, aid in enumerate(author_ids, 1):
-        data = api_get(f"{BASE_URL}/works", {
-            "filter":   f"authorships.author.id:{aid},type:article",
-            "sort":     "publication_date:desc",
-            "per_page": LAST_N_PAPERS,
-            "select":   "id,title,doi,publication_year,abstract_inverted_index,primary_location,authorships",
-        })
-        papers = []
-        dept_found = False
-        for w in data.get("results", []):
-            source = (w.get("primary_location") or {}).get("source") or {}
-            papers.append({
-                "title":    w.get("title", ""),
-                "doi":      w.get("doi", ""),
-                "year":     w.get("publication_year", ""),
-                "journal":  source.get("display_name", ""),
-                "abstract": reconstruct_abstract(w.get("abstract_inverted_index")),
-            })
-            # Extract department from the most recent paper where this author appears
-            if not dept_found:
-                for auth in (w.get("authorships") or []):
-                    if aid in ((auth.get("author") or {}).get("id") or ""):
-                        raw = auth.get("raw_affiliation_strings") or []
-                        dept = parse_department(raw)
-                        if dept:
-                            author_departments[aid] = dept
-                            dept_found = True
-                        break
-        author_papers[aid] = papers
-
-        if i % 25 == 0:
-            print(f"  ... {i}/{len(author_ids)} done")
-        time.sleep(0.06)  # slight delay to avoid hitting rate limits
-
+    with ThreadPoolExecutor(max_workers=MAX_PARALLEL_WORKERS) as executor:
+        # Submit all author paper fetch jobs
+        future_to_aid = {
+            executor.submit(_fetch_author_papers, aid): aid
+            for aid in author_ids
+        }
+        
+        # Collect results as they complete
+        completed = 0
+        for future in as_completed(future_to_aid):
+            aid, papers, dept = future.result()
+            author_papers[aid] = papers
+            if dept:
+                author_departments[aid] = dept
+            completed += 1
+            if completed % 25 == 0:
+                print(f"  ... {completed}/{len(author_ids)} authors processed")
+    
+    print(f"  ... {len(author_ids)}/{len(author_ids)} authors processed")
     return author_papers, author_departments
 
 
@@ -738,7 +784,8 @@ def score_and_rank(
       keyword_pct    = keyword_score / len(keywords) * 100
       h_index_bonus  = min(h_index, 50) / 50 * 20          (up to 20 pts)
       cite_bonus     = min(cited_by_count, 20000) / 20000 * 10  (up to 10 pts)
-      total_score    = keyword_pct + h_index_bonus + cite_bonus  (max ~130)
+      mech_bonus     = 5 if 'mech' in department (normalized)  (5 pts)
+      total_score    = keyword_pct + h_index_bonus + cite_bonus + mech_bonus  (max ~135)
 
     Tie-break: cited_by_count descending.
     """
@@ -761,7 +808,12 @@ def score_and_rank(
         cited_by_count = profile.get("cited_by_count", 0) or 0
         h_bonus   = min(h_index, 50) / 50 * 20
         cite_bonus = min(cited_by_count, 20000) / 20000 * 10
-        total_score = round(kw_pct + h_bonus + cite_bonus, 1)
+        
+        # Mechanical engineering department bonus
+        department = author_departments.get(aid, "")
+        mech_bonus = 5 if "mech" in _normalize(department) else 0
+        
+        total_score = round(kw_pct + h_bonus + cite_bonus + mech_bonus, 1)
         # total_score = round(kw_pct, 1)  # For pure keyword ranking, comment out bonuses
 
 
