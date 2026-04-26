@@ -56,6 +56,9 @@ TARGET_SUBFIELDS = {
         2209,   # Industrial and Manufacturing Engineering
         2203,   # Automotive Engineering
         2202,   # Aerospace Engineering
+        2207,   # Control and Systems Engineering       ← new (digital twins, control)
+        2208,   # Fluid Flow and Transfer Processes     ← new (energy/thermal work)
+        2213,   # Safety, Risk, Reliability and Quality ← new (systems reliability)
     ],
     "thermal & energy engineering": [
         2102,   # Energy Engineering and Power Technology
@@ -69,9 +72,24 @@ TARGET_SUBFIELDS = {
         1706,   # Computer Science Applications
         1702,   # Artificial Intelligence
         1712,   # Software
+        1710,   # Signal Processing                    ← new (pose estimation work)
+        1711,   # Computer Vision and Pattern Recognition ← new (pose estimation)
+        1708,   # Human-Computer Interaction           ← new (clinical AI interfaces)
+        1709,   # Information Systems                  ← new (knowledge graphs, CureMD)
+    ],
+    "biomedical engineering": [                        # ← entire new category
+        2204,   # Biomedical Engineering
+    ],
+    "mathematics & optimisation": [                    # ← entire new category
+        2604,   # Applied Mathematics
+        2605,   # Computational Mathematics
+        2606,   # Control and Optimization             ← directly your NSGA-III work
+        2613,   # Statistics and Probability
+    ],
+    "decision & management science": [                 # ← new, for ops research overlap
+        1803,   # Management Science and Operations Research
     ],
 }
-
 # Flat set of all allowed subfield IDs (union of every group above)
 ALLOWED_SUBFIELD_IDS = {sid for ids in TARGET_SUBFIELDS.values() for sid in ids}
 
@@ -143,7 +161,7 @@ TO_DATE   = date.today().strftime("%Y-%m-%d")
 FROM_DATE = date(date.today().year - 2, date.today().month, date.today().day).strftime("%Y-%m-%d")
 
 MIN_PAPERS    = 3        # minimum papers in the date window to qualify
-MAX_AUTHORS   = 1500     # cap on how many authors to process (API budget)
+MAX_AUTHORS   = 30000     # cap on how many authors to process (API budget)
 LAST_N_PAPERS = 10       # papers to fetch per author for keyword scoring
 
 BASE_URL = "https://api.openalex.org"
