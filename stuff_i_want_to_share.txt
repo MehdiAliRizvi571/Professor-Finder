@@ -11,3 +11,65 @@ Amit Bandyopadhyay
 Mehdi Hosseinzadeh
 Satyajit Mojumder
 Lloyd Smith
+
+                   
+========================================================================
+  PROFESSOR RANKER -- powered by OpenAlex
+========================================================================
+  Field      : mechanical engineering
+  Keywords   : ['machine learning combustion', 'NSGA-III', 'surrogate model', 'spark ignition engine', 'internal combustion engine', 'physics-informed', 'alternative fuels', 'convex hull', 'response surface methodology', 'fuel blend', 'alcohol gasoline', 'oxygenated fuel', 'biofuels', 'brake thermal efficiency', 'NOx prediction', 'emission reduction', 'emissions optimization', 'engine emissions', 'gradient boosting', 'XGBoost', 'evolutionary algorithm', 'Pareto optimization', 'data-driven optimization', 'digital twin', 'knowledge graph', 'scientific machine learning', 'neural operator', 'Neo4j', 'graph neural network', 'stochastic modeling', 'Gaussian process', 'techno-economic analysis', 'LCA', 'life cycle assessment', 'multi-objective optimization', 'heat transfer', 'computational fluid dynamics', 'data driven thermodynamics', 'thermal management', 'renewable energy systems', 'energy optimization', 'decarbonization', 'energy transition', 'manufacturing', 'robotics', 'energy harvesting', 'vibration', 'control systems', 'additive manufacturing', 'digital shadow', 'machine learning', 'artificial intelligence', 'sustainability']
+  Date range : 2024-04-26 -> 2026-04-26
+  Min papers : 3  |  Max authors: 30000
+  Dept filter: ON
+
+[1/6] Resolving 'mechanical engineering' -> OpenAlex topic IDs via subfields ...
+  Matched target group 'mechanical engineering' -> subfield IDs [2210, 2206, 2211, 2209, 2203, 2202, 2207, 2208, 2213]
+  Using subfield IDs: [2305, 1803, 2202, 2203, 2204, 2206, 2207, 2208, 2209, 2210, 2211, 2213, 1702, 1706, 1708, 1709, 1710, 1711, 1712, 2604, 2605, 2606, 2100, 2613, 2102, 2105]
+  Environmental Engineering: 19 topics
+  Management Science and Operations Research: 34 topics
+  Aerospace Engineering: 44 topics
+  Automotive Engineering: 12 topics
+  Biomedical Engineering: 72 topics
+  Computational Mechanics: 30 topics
+  Control and Systems Engineering: 44 topics
+  Electrical and Electronic Engineering: 117 topics
+  Industrial and Manufacturing Engineering: 17 topics
+  Mechanical Engineering: 79 topics
+  Mechanics of Materials: 29 topics
+  Safety, Risk, Reliability and Quality: 12 topics
+  Artificial Intelligence: 77 topics
+  Computer Science Applications: 10 topics
+  Hardware and Architecture: 8 topics
+  Human-Computer Interaction: 8 topics
+  Information Systems: 78 topics
+  Signal Processing: 10 topics
+  Software: 5 topics
+  Applied Mathematics: 17 topics
+  Computational Mathematics: 1 topics
+  [HTTP 404] https://api.openalex.org/subfields/2606
+  subfield-2606: 0 topics
+  General Energy: 1 topics
+  Statistics and Probability: 20 topics
+  Energy Engineering and Power Technology: 2 topics
+  Renewable Energy, Sustainability and the Environment: 22 topics
+  Total unique topic IDs: 768   sample: ['T10435', 'T10766', 'T10770', 'T10894', 'T11119']
+
+[2/6] Fetching recent US 'mechanical engineering' works (2024-04-26 -> 2026-04-26) ...
+  Retrieved 1000 works
+  Authors with >=3 papers: 92
+
+[3/6] Fetching author profiles (up to 30000) in parallel (15 workers) ...
+  ... 1/2 batches completed (46 profiles so far)
+  ... 2/2 batches completed (86 profiles so far)
+  Done -- 86 profiles enriched, 6 filtered (wrong department)
+
+[4/6] Fetching last 10 papers per author in parallel (15 workers) ...
+  ... 25/86 authors processed
+  ... 50/86 authors processed
+  ... 75/86 authors processed
+  ... 86/86 authors processed
+
+[5/6] Scoring and ranking ...
+
+[6/6] CSV saved -> ranked_professors_mechanical-engineering_machine-learning-combustion_NSGA-III.csv  (55 rows, 53 keywords scored)
+PS D:\Downloads - New\Professor Finder> 
