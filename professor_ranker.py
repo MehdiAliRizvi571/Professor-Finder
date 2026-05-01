@@ -505,14 +505,19 @@ def fetch_qualifying_authors(topic_ids: list[str], field: str, no_dept_filter: b
         }, max_results=50000)
     else:
         # Batch topic IDs to avoid URL length issues (~100 per batch)
+        import threading
         TOPIC_BATCH = 100
-        all_works = []
-        seen_work_ids = set()
         n_batches = (len(topic_ids) + TOPIC_BATCH - 1) // TOPIC_BATCH
-        next_milestone = 1000
+        max_results_per_batch = max(1000, 50000 // n_batches)
+        print(f"  Fetching {n_batches} batches in parallel "
+              f"(max {max_results_per_batch} works/batch) ...")
 
-        for b_start in range(0, len(topic_ids), TOPIC_BATCH):
-            batch = topic_ids[b_start:b_start + TOPIC_BATCH]
+        seen_work_ids = set()
+        all_works = []
+        _lock = threading.Lock()
+        next_milestone = [1000]
+
+        def _fetch_one_batch(idx: int, batch: list[str]) -> int:
             topic_filter = "|".join(batch)
             works_filter = (
                 f"institutions.country_code:us,"
@@ -524,19 +529,31 @@ def fetch_qualifying_authors(topic_ids: list[str], field: str, no_dept_filter: b
             batch_works = paginate(f"{BASE_URL}/works", {
                 "filter": works_filter,
                 "select": "id,authorships",
-            }, max_results=50000)
+            }, max_results=max_results_per_batch)
 
-            # Deduplicate across topic batches
-            for w in batch_works:
-                wid = w.get("id", "")
-                if wid not in seen_work_ids:
-                    seen_work_ids.add(wid)
-                    all_works.append(w)
+            added = 0
+            with _lock:
+                for w in batch_works:
+                    wid = w.get("id", "")
+                    if wid not in seen_work_ids:
+                        seen_work_ids.add(wid)
+                        all_works.append(w)
+                        added += 1
+                total = len(all_works)
+                msg_milestone = ""
+                if total >= next_milestone[0]:
+                    msg_milestone = f"  >>> Milestone: {next_milestone[0]} unique works reached ..."
+                    next_milestone[0] += 1000
+            print(f"  Batch {idx + 1}/{n_batches}: fetched {len(batch_works)}, added {added} new, {total} unique total{msg_milestone}")
+            return added
 
-            print(f"  Batch {b_start // TOPIC_BATCH + 1}/{n_batches}: {len(batch_works)} works, {len(all_works)} unique total")
-            if len(all_works) >= next_milestone:
-                print(f"  >>> Milestone: {next_milestone} unique works reached ...")
-                next_milestone += 1000
+        with ThreadPoolExecutor(max_workers=MAX_PARALLEL_WORKERS) as pool:
+            futures = {
+                pool.submit(_fetch_one_batch, i, topic_ids[i:i + TOPIC_BATCH]): i
+                for i in range(0, len(topic_ids), TOPIC_BATCH)
+            }
+            for fut in as_completed(futures):
+                _ = fut.result()
 
         works = all_works
 
