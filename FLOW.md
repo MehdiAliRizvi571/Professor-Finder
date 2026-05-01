@@ -30,9 +30,8 @@ User runs:  py -3.10 professor_ranker.py --field "mechanical engineering" -k "he
    to that subfield.
 3. Collect all topic IDs into a deduplicated list (e.g. `["T10236", "T10710", ...]`).
 
-> These topic IDs are **not used for the works filter** — the works filter uses
-> subfield IDs directly (more efficient). The topic IDs are kept for potential
-> future use.
+> These topic IDs **are** used in Step 2 to make sure we only grab papers that
+> belong to those specific research areas. This keeps the initial pool relevant.
 
 ---
 
@@ -41,15 +40,21 @@ User runs:  py -3.10 professor_ranker.py --field "mechanical engineering" -k "he
 
 ### 2a. The works query + pagination
 
+The script asks OpenAlex for up to **50,000 papers** (instead of the old 1,000) so we get a much bigger starting pool.
+
+**When a field is supplied (default mode):**
+Instead of filtering by broad subfield IDs, it now filters by the **exact topic IDs** gathered in Step 1. Because the list of topic IDs can be very long (hundreds of IDs), the script splits them into smaller batches of ~100 and sends separate requests. Any paper that matches *any* of those batches is kept, and duplicates across batches are removed automatically.
+
 ```python
+# simplified view — internally batched in ~100-topic chunks
 works = paginate(BASE_URL + "/works", {
     "filter": "institutions.country_code:us,"
-              "topics.subfield.id:2209|2210|2211|...,   # ← all allowed subfield IDs
+              "topics.id:T10236|T10710|...,   # ← exact topic IDs from Step 1
               "from_publication_date:2024-04-14,"
               "to_publication_date:2026-04-14,"
               "type:article",
-    "select": "id,authorships",   # only fetch these two fields — saves bandwidth
-}, max_results=5000)
+    "select": "id,authorships",
+}, max_results=50000)
 ```
 
 **What `paginate()` does internally:**
@@ -98,8 +103,8 @@ qualifying = { aid: meta for aid, meta in metadata.items()
 
 Only authors with **≥ 3 papers** in the 2-year window proceed.
 
-> With `--no-dept-filter`, the `topics.subfield.id` part is removed from the
-> filter, so all US articles are searched regardless of field.
+> With `--no-dept-filter`, the `topics.id` part is removed from the filter, so
+> all US articles are searched regardless of field.
 
 ---
 
@@ -205,19 +210,29 @@ Final list is sorted by `total_score` descending (tie-break: `cited_by_count`).
 
 ---
 
-## CLI usage
+## Three ways to search
+
+| Mode | What it does | Best for |
+|---|---|---|
+| **Default** (field-based) | Uses the field you provide (e.g. *mechanical engineering*) to pull topic IDs, then fetches papers tagged with those topics. Only professors from those topics are shortlisted. | Finding the best professors in a specific research area |
+| **No-dept-filter** (`--no-dept-filter`) | Ignores the field entirely. Looks at *all* US papers in the date range and ranks by keyword matches only. | When you care about keywords more than department — e.g. "data science" professors who could be in CS, stats, or engineering |
+| **University** (`--uni`) | You name one or more universities. The script only looks at papers from those institutions and ignores the field filter. | Checking a specific school or comparing a handful of schools |
+| **State** (`--state`) | You name a US state. The script loads every university in that state, then only looks at papers from those institutions. Field is ignored. | Seeing all candidates in a geographic area |
 
 ```powershell
-# Default run (mechanical engineering, dept filter ON):
+# Default — mechanical engineering, field filter ON:
 py -3.10 .\professor_ranker.py
 
 # Custom field + keywords:
 py -3.10 .\professor_ranker.py --field "environmental engineering" -k "wastewater" "membrane" "nanofiltration"
 
-# Skip department filter — rank ALL US authors by keyword density only:
+# No-dept-filter — rank ALL US authors by keyword density only:
 py -3.10 .\professor_ranker.py --no-dept-filter -k "heat transfer" "thermal management"
 
-# State-based search — only professors at universities in Texas:
+# Specific universities — only look at MIT + Stanford papers:
+py -3.10 .\professor_ranker.py --uni "MIT" "Stanford University" -k "robotics" "control systems"
+
+# State-based — only professors at universities in Texas:
 py -3.10 .\professor_ranker.py --state "Texas" -k "heat transfer" "machine learning"
 
 # State + custom keywords (field arg is ignored in state mode):
@@ -248,13 +263,12 @@ and bypasses all field/department filtering:
 [6/6]  save_csv()
 ```
 
-### Key differences vs standard mode
+### Key differences across modes
 
-| Aspect | Standard mode | State mode |
-|---|---|---|
-| Author discovery | `/works` filtered by subfield IDs | `/works` filtered by institution IDs |
-| Department filter | ON (unless `--no-dept-filter`) | Always OFF |
-| Field used | Yes (subfield/topic filter) | Ignored |
-| Institution source | `universities_by_state.json` | All US |
-| Keyword shortlisting | Score ≥ 1 keyword | Score ≥ 1 keyword (same) |
-| CSV label | field name | state name |
+| Aspect | Default (field-based) | `--no-dept-filter` | `--uni` | `--state` |
+|---|---|---|---|---|
+| Author discovery | Papers tagged with the field's **topic IDs** | **All** US papers | Papers from named universities | Papers from universities in that state |
+| Field / topic filter | ON | OFF | OFF | OFF |
+| Institution restriction | Any US university | Any US university | Only named universities | Only universities in that state |
+| Keyword shortlisting | Score ≥ 1 keyword | Score ≥ 1 keyword | Score ≥ 1 keyword | Score ≥ 1 keyword |
+| CSV label | field name | `no_dept_filter` | uni names joined | state name |

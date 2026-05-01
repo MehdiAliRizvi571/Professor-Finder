@@ -509,6 +509,7 @@ def fetch_qualifying_authors(topic_ids: list[str], field: str, no_dept_filter: b
         all_works = []
         seen_work_ids = set()
         n_batches = (len(topic_ids) + TOPIC_BATCH - 1) // TOPIC_BATCH
+        next_milestone = 1000
 
         for b_start in range(0, len(topic_ids), TOPIC_BATCH):
             batch = topic_ids[b_start:b_start + TOPIC_BATCH]
@@ -533,6 +534,9 @@ def fetch_qualifying_authors(topic_ids: list[str], field: str, no_dept_filter: b
                     all_works.append(w)
 
             print(f"  Batch {b_start // TOPIC_BATCH + 1}/{n_batches}: {len(batch_works)} works, {len(all_works)} unique total")
+            if len(all_works) >= next_milestone:
+                print(f"  >>> Milestone: {next_milestone} unique works reached ...")
+                next_milestone += 1000
 
         works = all_works
 
