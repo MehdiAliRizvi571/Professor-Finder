@@ -46,7 +46,7 @@ from datetime import date
 load_dotenv()
 
 # ── PARALLEL PROCESSING CONFIG ─────────────────────────────────────────────────
-MAX_PARALLEL_WORKERS = 15  # Number of parallel API calls for enriching profiles and fetching papers
+MAX_PARALLEL_WORKERS = 5   # Number of parallel API calls for enriching profiles and fetching papers
 
 # ── DEFAULTS (overridden by CLI args) ──────────────────────────────────────────
 
@@ -89,7 +89,7 @@ TARGET_SUBFIELDS = {
     "mathematics & optimisation": [                    # ← entire new category
         2604,   # Applied Mathematics
         2605,   # Computational Mathematics
-        2606,   # Control and Optimization             ← directly your NSGA-III work
+        # 2606 removed — returns 404 from OpenAlex; Control and Optimization not available
         2613,   # Statistics and Probability
     ],
     "decision & management science": [                 # ← new, for ops research overlap
@@ -418,32 +418,29 @@ def fetch_authors_by_institutions(inst_id_map: dict[str, str]) -> dict[str, dict
 def resolve_subfield_ids(field: str) -> list[int]:
     """
     Map the user-supplied field name to a list of OpenAlex subfield IDs.
-    First checks the hard-coded TARGET_SUBFIELDS map; if the field isn't
-    there, falls back to a search on the /subfields endpoint.
-    Always returns the union of ALL allowed subfield IDs so that every
-    target department is covered.
+    First checks the hard-coded TARGET_SUBFIELDS map; only returns the
+    subfields relevant to the requested field to keep queries fast.
+    Falls back to a search on the /subfields endpoint if no match.
     """
-    # Always use the full union of allowed subfields
-    subfield_ids = list(ALLOWED_SUBFIELD_IDS)
+    subfield_ids = []
 
-    # If the user typed a specific field that appears in TARGET_SUBFIELDS,
-    # log which group matched; but we still include everything.
+    # Return ONLY the subfields that match the requested field
     matched_key = None
     for key in TARGET_SUBFIELDS:
         if key in field.lower():
             matched_key = key
+            subfield_ids = list(TARGET_SUBFIELDS[key])
             break
 
     if matched_key:
-        print(f"  Matched target group '{matched_key}' -> subfield IDs {TARGET_SUBFIELDS[matched_key]}")
+        print(f"  Matched target group '{matched_key}' -> subfield IDs {subfield_ids}")
     else:
         # Fallback: search OpenAlex for subfields matching the field name
         data = api_get(f"{BASE_URL}/subfields", {"search": field, "per_page": 10})
         for sf in data.get("results", []):
             sf_id = int(sf["id"].split("/")[-1])
-            if sf_id not in ALLOWED_SUBFIELD_IDS:
-                subfield_ids.append(sf_id)
-                print(f"  Added subfield via search: {sf.get('display_name')} (id={sf_id})")
+            subfield_ids.append(sf_id)
+            print(f"  Added subfield via search: {sf.get('display_name')} (id={sf_id})")
 
     return subfield_ids
 
@@ -502,13 +499,13 @@ def fetch_qualifying_authors(topic_ids: list[str], field: str, no_dept_filter: b
         works = paginate(f"{BASE_URL}/works", {
             "filter": works_filter,
             "select": "id,authorships",
-        }, max_results=50000)
+        }, max_results=500)
     else:
         # Batch topic IDs to avoid URL length issues (~100 per batch)
         import threading
         TOPIC_BATCH = 100
         n_batches = (len(topic_ids) + TOPIC_BATCH - 1) // TOPIC_BATCH
-        max_results_per_batch = max(1000, 50000 // n_batches)
+        max_results_per_batch = min(1000, max(500, 50000 // n_batches))
         print(f"  Fetching {n_batches} batches in parallel "
               f"(max {max_results_per_batch} works/batch) ...")
 
