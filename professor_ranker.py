@@ -485,8 +485,8 @@ def find_topic_ids(field: str) -> list[str]:
 def fetch_qualifying_authors(topic_ids: list[str], field: str, no_dept_filter: bool = False) -> dict[str, dict]:
     """
     Pull works from /works filtered by US institution + date range.
-    When no_dept_filter=False (default), also filters by target subfield IDs.
-    Count papers per author; return those with >= MIN_PAPERS.
+    When no_dept_filter=False (default), also filters by topic IDs resolved
+    from the field name. Count papers per author; return those with >= MIN_PAPERS.
     """
     print(f"\n[2/6] Fetching recent US '{field}' works ({FROM_DATE} -> {TO_DATE}) ...")
     if no_dept_filter:
@@ -499,22 +499,44 @@ def fetch_qualifying_authors(topic_ids: list[str], field: str, no_dept_filter: b
             f"to_publication_date:{TO_DATE},"
             f"type:article"
         )
+        works = paginate(f"{BASE_URL}/works", {
+            "filter": works_filter,
+            "select": "id,authorships",
+        }, max_results=50000)
     else:
-        subfield_filter = "|".join(str(sid) for sid in ALLOWED_SUBFIELD_IDS)
-        works_filter = (
-            f"institutions.country_code:us,"
-            f"topics.subfield.id:{subfield_filter},"
-            f"from_publication_date:{FROM_DATE},"
-            f"to_publication_date:{TO_DATE},"
-            f"type:article"
-        )
+        # Batch topic IDs to avoid URL length issues (~100 per batch)
+        TOPIC_BATCH = 100
+        all_works = []
+        seen_work_ids = set()
+        n_batches = (len(topic_ids) + TOPIC_BATCH - 1) // TOPIC_BATCH
 
-    works = paginate(f"{BASE_URL}/works", {
-        "filter": works_filter,
-        "select": "id,authorships",
-    }, max_results=1000)
+        for b_start in range(0, len(topic_ids), TOPIC_BATCH):
+            batch = topic_ids[b_start:b_start + TOPIC_BATCH]
+            topic_filter = "|".join(batch)
+            works_filter = (
+                f"institutions.country_code:us,"
+                f"topics.id:{topic_filter},"
+                f"from_publication_date:{FROM_DATE},"
+                f"to_publication_date:{TO_DATE},"
+                f"type:article"
+            )
+            batch_works = paginate(f"{BASE_URL}/works", {
+                "filter": works_filter,
+                "select": "id,authorships",
+            }, max_results=50000)
 
-    print(f"  Retrieved {len(works)} works")
+            # Deduplicate across topic batches
+            for w in batch_works:
+                wid = w.get("id", "")
+                if wid not in seen_work_ids:
+                    seen_work_ids.add(wid)
+                    all_works.append(w)
+
+            print(f"  Batch {b_start // TOPIC_BATCH + 1}/{n_batches}: {len(batch_works)} works, {len(all_works)} unique total")
+
+        works = all_works
+
+    print(f"  Retrieved {len(works)} unique works")
 
     counts   = defaultdict(int)
     metadata = {}
