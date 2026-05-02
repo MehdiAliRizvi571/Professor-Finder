@@ -208,21 +208,27 @@ def api_get(url: str, params: Optional[dict] = None, retries: int = 5) -> dict:
     return {}
 
 
-def paginate(url: str, params: dict, max_results: int = 10_000) -> list[dict]:
-    """Fetch all pages of an OpenAlex result set via cursor pagination."""
+def paginate(url: str, params: dict, max_results: int = 10_000, return_total: bool = False):
+    """Fetch all pages of an OpenAlex result set via cursor pagination.
+    If return_total is True, returns (results, total_count)."""
     results = []
+    total_count = None
     params  = {**params, "per_page": 100, "cursor": "*"}
     while len(results) < max_results:
         data  = api_get(url, params)
         if not data:
             break
         batch = data.get("results", [])
+        if total_count is None and "meta" in data:
+            total_count = data["meta"].get("count")
         results.extend(batch)
         next_cursor = data.get("meta", {}).get("next_cursor")
         if not next_cursor or not batch:
             break
         params["cursor"] = next_cursor
         time.sleep(0.12)   # ~8 req/s — well inside the polite-pool limit
+    if return_total:
+        return results, total_count
     return results
 
 
@@ -373,12 +379,12 @@ def fetch_authors_by_institutions(inst_id_map: dict[str, str]) -> dict[str, dict
             f"to_publication_date:{TO_DATE},"
             f"type:article"
         )
-        works = paginate(f"{BASE_URL}/works", {
+        works, total_works = paginate(f"{BASE_URL}/works", {
             "filter": works_filter,
             "select": "id,authorships",
-        }, max_results=5000)
+        }, max_results=50000, return_total=True)
 
-        print(f"  Batch {b_start // BATCH + 1}/{n_batches}: {len(works)} works")
+        print(f"  Batch {b_start // BATCH + 1}/{n_batches}: {total_works} total works | {len(works)} fetched")
 
         for work in works:
             wid = (work.get("id") or "").split("/")[-1]

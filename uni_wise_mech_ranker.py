@@ -111,7 +111,8 @@ def main() -> None:
     total_profiles = 0
     total_mech = 0
     total_ranked = 0
-    skipped = 0
+    skipped_unis = []   # (uni_name, reason)
+    failed_unis = []    # (uni_name, error)
 
     for idx, (state, uni_name) in enumerate(unis, 1):
         t0 = time.time()
@@ -121,22 +122,25 @@ def main() -> None:
             # 1) Resolve OpenAlex institution ID
             inst_map = resolve_institution_ids([uni_name])
             if not inst_map:
-                print(f"  -> Institution not found in OpenAlex, skipping.")
-                skipped += 1
+                reason = "Institution not found in OpenAlex"
+                print(f"  -> {reason}, skipping.")
+                skipped_unis.append((uni_name, reason))
                 continue
 
             # 2) Fetch qualifying authors at this institution
             authors = fetch_authors_by_institutions(inst_map)
             if not authors:
-                print(f"  -> No qualifying authors (>= {MIN_PAPERS} papers), skipping.")
-                skipped += 1
+                reason = f"No qualifying authors (>={MIN_PAPERS} papers)"
+                print(f"  -> {reason}, skipping.")
+                skipped_unis.append((uni_name, reason))
                 continue
 
             # 3) Enrich profiles (no built-in dept filter — we apply our own)
             profiles = fetch_author_profiles(authors, no_dept_filter=True)
             if not profiles:
-                print(f"  -> No profiles after enrichment, skipping.")
-                skipped += 1
+                reason = "No profiles after enrichment"
+                print(f"  -> {reason}, skipping.")
+                skipped_unis.append((uni_name, reason))
                 continue
 
             # 4) Fetch last N papers & parse raw-affiliation departments
@@ -155,10 +159,9 @@ def main() -> None:
                     mech_depts[aid] = dept
 
             if not mech_profiles:
-                print(
-                    f"  -> {len(profiles)} profiles, 0 with 'mech' department, skipping."
-                )
-                skipped += 1
+                reason = f"{len(profiles)} profiles, 0 with 'mech' department"
+                print(f"  -> {reason}, skipping.")
+                skipped_unis.append((uni_name, reason))
                 continue
 
             # 6) Score & rank the mech subset
@@ -188,19 +191,34 @@ def main() -> None:
             print("\n  Interrupted by user. Exiting gracefully ...")
             break
         except Exception as exc:
-            print(f"  -> ERROR: {exc}")
-            skipped += 1
+            err_msg = str(exc)
+            print(f"  -> ERROR: {err_msg}")
+            failed_unis.append((uni_name, err_msg))
             continue
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print("\n" + "=" * 72)
     print("  SUMMARY")
     print("=" * 72)
-    print(f"  Universities processed : {idx - skipped}/{len(unis)}  ({skipped} skipped/failed)")
+    processed = idx - len(skipped_unis) - len(failed_unis)
+    print(f"  Universities processed : {processed}/{len(unis)}")
+    print(f"  Skipped              : {len(skipped_unis)}")
+    print(f"  Failed               : {len(failed_unis)}")
     print(f"  Total profiles seen    : {total_profiles}")
     print(f"  Mech-dept professors   : {total_mech}")
     print(f"  Final ranked rows      : {total_ranked}")
     print(f"  CSV output             : {out_path}")
+
+    if skipped_unis:
+        print("\n  SKIPPED UNIVERSITIES:")
+        for u, r in skipped_unis:
+            print(f"    - {u}: {r}")
+
+    if failed_unis:
+        print("\n  FAILED UNIVERSITIES:")
+        for u, e in failed_unis:
+            print(f"    - {u}: {e}")
+
     print("=" * 72)
 
 
